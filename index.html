@@ -1,0 +1,2761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人主页 | 结构工程师</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    /* ── 主色系：空青 + 黄丹 ── */
+    --kq:#014b8f;          /* 空青 */
+    --kq-mid:#2f7ab8;      /* 空青中调 */
+    --kq-light:#e8f1fa;    /* 空青极淡 */
+    --kq-pale:#b8d2ed;     /* 空青淡 */
+    --hd:#eb5514;          /* 黄丹 */
+    --hd-mid:#f07a42;      /* 黄丹中调 */
+    --hd-light:#fdf0ea;    /* 黄丹极淡 */
+    /* ── 辅助色 ── */
+    --ys:#2f90b9;          /* 云山 */
+    --ys-light:#e4f4fa;
+    --lm:#f9d367;          /* 淡密 */
+    --lm-light:#fffae8;
+    --pb:#7aa591;          /* 漂碧 */
+    --pb-light:#eaf4f0;
+    --jc:#fa7d1c;          /* 橘橙 */
+    /* ── 点缀 ── */
+    --slq:#c0182f;         /* 石榴裙 */
+    --se:#507936;          /* 秣色 */
+    --lshi:#b7d07a;        /* 蘆事 */
+    --sg:#61649e;          /* 山梗 */
+    /* ── 渐变 ── */
+    --grad-main:linear-gradient(135deg,#014b8f 0%,#2f90b9 50%,#eb5514 100%);
+    --grad-nav:linear-gradient(90deg,#014b8f 0%,#1a6ba8 60%,#2f90b9 100%);
+    --grad-hero:linear-gradient(120deg,#014b8f 0%,#0e5fa0 40%,#eb5514 100%);
+    --grad-btn:linear-gradient(135deg,#eb5514,#f07a42);
+    --grad-accent:linear-gradient(135deg,#014b8f,#2f90b9);
+    --grad-card-top:linear-gradient(180deg,rgba(1,75,143,.06) 0%,rgba(1,75,143,0) 100%);
+    /* ── 中性 ── */
+    --bg:#f4f6f9;--surface:#fff;--surface2:#f0f3f7;
+    --border:rgba(1,75,143,.12);--border2:rgba(1,75,143,.22);
+    --text:#1a2332;--text2:#3d5068;--text3:#7a8fa6;
+    --radius:8px;--radius-lg:14px;--radius-xl:20px;
+    --shadow:0 1px 4px rgba(1,75,143,.08),0 1px 2px rgba(1,75,143,.05);
+    --shadow-lg:0 6px 24px rgba(1,75,143,.12);
+    --shadow-card:0 2px 12px rgba(1,75,143,.1);
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+
+  /* ══════ NAV ══════ */
+  nav{position:fixed;top:0;left:0;right:0;height:58px;background:var(--grad-nav);z-index:1000;display:flex;align-items:center;padding:0 28px;gap:0;box-shadow:0 2px 12px rgba(1,75,143,.25);transition:background .4s ease}
+  .nav-brand{font-size:17px;font-weight:700;color:#fff;margin-right:36px;white-space:nowrap;letter-spacing:.04em;text-shadow:0 1px 4px rgba(0,0,0,.2)}
+  .nav-brand span{color:var(--lm)}
+  .nav-links{display:flex;gap:4px;flex:1}
+  .nav-link{padding:7px 16px;border-radius:var(--radius);color:rgba(255,255,255,.82);cursor:pointer;border:none;background:none;font-size:14px;font-family:inherit;transition:all .18s}
+  .nav-link:hover{background:rgba(255,255,255,.15);color:#fff}
+  .nav-link.active{background:rgba(255,255,255,.22);color:#fff;font-weight:500}
+  .nav-admin{margin-left:auto;padding:6px 15px;border-radius:var(--radius);border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);cursor:pointer;font-size:13px;color:rgba(255,255,255,.9);font-family:inherit;transition:all .18s;backdrop-filter:blur(4px)}
+  .nav-admin:hover{background:rgba(235,85,20,.7);border-color:rgba(235,85,20,.8);color:#fff}
+  .nav-admin.active{background:rgba(235,85,20,.8);border-color:var(--hd);color:#fff}
+
+  /* ══════ LAYOUT ══════ */
+  main{margin-top:58px;min-height:calc(100vh - 58px)}
+  .page{display:none;padding:32px 24px;max-width:1120px;margin:0 auto}
+  .page.active{display:block}
+  .page-full{display:none;padding:0;max-width:none;margin:0}
+  .page-full.active{display:block}
+
+  /* ══════ COMMON ══════ */
+  .section-title{font-size:19px;font-weight:700;color:var(--kq);margin-bottom:20px;padding-bottom:10px;border-bottom:2.5px solid var(--kq-mid);position:relative}
+  .section-title::after{content:'';position:absolute;bottom:-2.5px;left:0;width:48px;height:2.5px;background:var(--hd)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;box-shadow:var(--shadow-card);background-image:var(--grad-card-top)}
+
+  /* ══════ PROFILE HERO ══════ */
+  .profile-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:0;margin-bottom:28px;overflow:hidden;box-shadow:var(--shadow-lg)}
+  .hero-banner{height:120px;background:var(--grad-hero);position:relative;overflow:hidden}
+  .hero-banner::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0px,rgba(255,255,255,.04) 1px,transparent 1px,transparent 12px)}
+  .hero-body{padding:0 32px 28px;display:flex;gap:24px;align-items:flex-start}
+  .avatar-wrap{margin-top:-44px;flex-shrink:0;position:relative}
+  .avatar{width:88px;height:88px;border-radius:50%;background:var(--kq-light);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;color:var(--kq);border:3px solid #fff;box-shadow:0 3px 12px rgba(1,75,143,.22);overflow:hidden;cursor:pointer;transition:box-shadow .2s}
+  .avatar:hover{box-shadow:0 3px 16px rgba(235,85,20,.35)}
+  .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+  .avatar-hint{position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:var(--hd);display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid #fff;cursor:pointer}
+  .profile-info{flex:1;padding-top:16px}
+  .profile-info h1{font-size:22px;font-weight:700;color:var(--text);margin-bottom:5px}
+  .title-badge{display:inline-block;background:var(--grad-btn);color:#fff;font-size:12px;padding:2px 12px;border-radius:20px;margin-bottom:10px;font-weight:500;box-shadow:0 2px 6px rgba(235,85,20,.28)}
+  .meta-row{display:flex;gap:18px;flex-wrap:wrap;color:var(--text2);font-size:13px}
+  .meta-item{display:flex;align-items:center;gap:5px;color:var(--text2)}
+  .meta-item::before{content:'·';color:var(--kq-pale);margin-right:4px}
+  .meta-item:first-child::before{content:''}
+  .profile-bio{margin-top:12px;font-size:14px;color:var(--text2);line-height:1.75;padding-left:2px;border-left:3px solid var(--kq-pale);padding-left:12px}
+
+  /* ══════ TIMELINE ══════ */
+  .timeline{position:relative;padding-left:20px}
+  .timeline-scroll{max-height:280px;overflow-y:auto;padding-right:6px}
+  .timeline-scroll::-webkit-scrollbar{width:5px}
+  .timeline-scroll::-webkit-scrollbar-track{background:transparent}
+  .timeline-scroll::-webkit-scrollbar-thumb{background:var(--kq-pale);border-radius:3px}
+  .timeline-scroll::-webkit-scrollbar-thumb:hover{background:var(--kq-mid)}
+  .timeline::before{content:'';position:absolute;left:6px;top:8px;bottom:8px;width:1.5px;background:linear-gradient(to bottom,var(--kq-pale),var(--hd-mid))}
+  .tl-item{position:relative;margin-bottom:20px;padding-left:20px}
+  .tl-dot{position:absolute;left:-20px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--kq);border:2.5px solid #fff;box-shadow:0 0 0 2px var(--kq-pale)}
+  .tl-dot.orange{background:var(--hd);box-shadow:0 0 0 2px var(--hd-light)}
+  .tl-dot.teal{background:var(--pb);box-shadow:0 0 0 2px var(--pb-light)}
+  .tl-year{font-size:11px;color:var(--text3);margin-bottom:2px;font-weight:500;letter-spacing:.04em}
+  .tl-title{font-weight:600;font-size:14px;color:var(--kq);margin-bottom:1px}
+  .tl-sub{font-size:13px;color:var(--text2)}
+  .tl-desc{font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5}
+
+  .skills-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .skill-tag{background:linear-gradient(135deg,var(--kq-light),var(--ys-light));color:var(--kq);border-radius:20px;padding:5px 15px;font-size:13px;border:1px solid var(--kq-pale);font-weight:500}
+
+  /* ══════ PROJECTS ══════ */
+  .view-toggle{display:flex;gap:8px;margin-bottom:20px;align-items:center;flex-wrap:wrap}
+  .toggle-btn{padding:8px 20px;border-radius:var(--radius);border:1.5px solid var(--border2);background:var(--surface);cursor:pointer;font-size:14px;color:var(--text2);font-family:inherit;transition:all .18s;font-weight:500}
+  .toggle-btn:hover{border-color:var(--kq);color:var(--kq)}
+  .toggle-btn.active{background:var(--grad-accent);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(1,75,143,.25)}
+
+  .proj-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-card)}
+  .proj-table{width:100%;border-collapse:collapse}
+  .proj-table th{background:linear-gradient(90deg,var(--kq-light),var(--ys-light));padding:11px 16px;text-align:left;font-size:13px;font-weight:600;color:var(--kq);border-bottom:1.5px solid var(--kq-pale)}
+  .proj-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+  .proj-table tr:last-child td{border-bottom:none}
+  .proj-table tr:hover td{background:var(--kq-light)}
+  .proj-table tr{cursor:pointer;transition:background .12s}
+  .type-badge{display:inline-block;padding:3px 11px;border-radius:20px;font-size:12px;font-weight:500}
+  .type-badge.safety{background:linear-gradient(135deg,#fde8eb,#fdd0d5);color:var(--slq)}
+  .type-badge.testing{background:linear-gradient(135deg,var(--kq-light),#d0e8f8);color:var(--kq)}
+  .type-badge.appraisal{background:linear-gradient(135deg,var(--hd-light),#fde3d4);color:var(--hd)}
+  .type-badge.research{background:linear-gradient(135deg,var(--pb-light),#d8ede7);color:#3d7a62}
+  .type-badge.other{background:var(--surface2);color:var(--text3)}
+
+  /* ══════ MAP ══════ */
+  #map-container{width:100%;height:calc(100vh - 58px);position:relative}
+  #map{width:100%;height:100%}
+  .map-search-box{position:absolute;top:10px;left:50px;z-index:900;display:flex;flex-wrap:wrap;gap:0;background:rgba(255,255,255,.97);border-radius:var(--radius-lg);box-shadow:0 2px 14px rgba(0,0,0,.18);max-width:380px;width:calc(100% - 100px)}
+  .map-search-box input{flex:1;border:none;outline:none;padding:10px 14px;font-size:14px;font-family:inherit;color:var(--text);background:transparent;min-width:0}
+  .map-search-box button{border:none;background:var(--grad-accent);color:#fff;padding:10px 16px;cursor:pointer;font-size:16px;transition:opacity .15s;white-space:nowrap}
+  .map-search-box button:hover{opacity:.9}
+  .map-search-results{position:absolute;top:100%;left:0;right:0;background:rgba(255,255,255,.97);border-radius:0 0 var(--radius-lg) var(--radius-lg);box-shadow:0 4px 14px rgba(0,0,0,.15);max-height:240px;overflow-y:auto;display:none;z-index:901}
+  .map-search-results.show{display:block}
+  .map-search-result-item{padding:9px 14px;cursor:pointer;font-size:13px;color:var(--text2);border-bottom:1px solid var(--border);transition:background .1s}
+  .map-search-result-item:hover{background:var(--kq-light);color:var(--kq)}
+  .map-search-result-item:last-child{border-bottom:none}
+
+  .layer-item{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:12px;color:var(--text2)}
+  .layer-dot{width:12px;height:12px;border-radius:3px}
+  .map-layer-switch{position:absolute;top:54px;right:10px;z-index:800;display:flex;gap:0;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-card)}
+  .layer-switch-btn{border:none;background:transparent;padding:7px 12px;font-size:12px;font-family:inherit;cursor:pointer;color:var(--text2);transition:all .15s;white-space:nowrap;border-right:1px solid var(--border)}
+  .layer-switch-btn:last-child{border-right:none}
+  .layer-switch-btn:hover{background:var(--kq-light);color:var(--kq)}
+  .layer-switch-btn.active{background:var(--grad-accent);color:#fff;font-weight:700}
+  .map-polygon-toggle{position:absolute;top:96px;right:10px;z-index:800;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:var(--radius-lg);padding:7px 14px;cursor:pointer;box-shadow:var(--shadow-card);transition:all .15s;font-size:12px;color:var(--text2)}
+  .map-polygon-toggle:hover{background:var(--kq-light);color:var(--kq)}
+  .map-polygon-toggle.off{opacity:.55}
+  .polygon-toggle-icon{font-size:14px}
+
+  /* ══════ NOTES ══════ */
+  .notes-layout{display:grid;grid-template-columns:285px 1fr;gap:20px;height:calc(100vh - 58px - 64px)}
+  .notes-sidebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-card)}
+  .notes-sidebar-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(90deg,var(--kq-light),var(--ys-light))}
+  .notes-sidebar-header h3{font-size:14px;font-weight:700;color:var(--kq)}
+  .note-list{flex:1;overflow-y:auto}
+  .note-item{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+  .note-item:hover{background:var(--kq-light)}
+  .note-item.active{background:linear-gradient(90deg,var(--kq-light),var(--hd-light));border-left:3px solid var(--kq)}
+  .note-item-title{font-weight:600;font-size:13px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+  .note-item-meta{font-size:11px;color:var(--text3);display:flex;gap:8px}
+  .note-content{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-card)}
+  .note-editor-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,var(--kq-light),rgba(255,255,255,0))}
+  .note-title-input{flex:1;border:none;outline:none;font-size:16px;font-weight:700;font-family:inherit;color:var(--text);background:transparent}
+  .note-body{flex:1;padding:20px;overflow-y:auto}
+  .note-textarea{width:100%;height:100%;border:none;outline:none;resize:none;font-family:inherit;font-size:14px;line-height:1.8;color:var(--text);background:transparent}
+  .note-preview{line-height:1.85;font-size:14px}
+  .note-preview h1,.note-preview h2,.note-preview h3{margin:1em 0 .5em;font-weight:700;color:var(--kq)}
+  .note-preview h1{font-size:20px}
+  .note-preview h2{font-size:17px}
+  .note-preview h3{font-size:15px}
+  .note-preview p{margin-bottom:1em}
+  .note-preview code{background:var(--kq-light);padding:1px 6px;border-radius:4px;font-size:13px;font-family:monospace;color:var(--kq)}
+  .note-preview pre{background:var(--kq-light);padding:12px;border-radius:var(--radius);overflow-x:auto;margin-bottom:1em;border-left:3px solid var(--kq)}
+  .note-preview pre code{background:none;padding:0}
+  .note-preview ul,.note-preview ol{padding-left:1.5em;margin-bottom:1em}
+  .note-preview blockquote{border-left:3px solid var(--kq-pale);padding-left:12px;color:var(--text2);margin-bottom:1em;background:var(--kq-light);border-radius:0 var(--radius) var(--radius) 0;padding:8px 12px}
+  .note-preview a{color:var(--kq);text-decoration:underline}
+  .note-tag{display:inline-block;background:var(--hd-light);color:var(--hd);font-size:11px;padding:1px 7px;border-radius:10px;margin-right:4px;border:1px solid rgba(235,85,20,.2)}
+
+  /* ══════ ADMIN ══════ */
+  .admin-grid{display:grid;grid-template-columns:240px 1fr;gap:0;height:calc(100vh - 58px);background:var(--bg)}
+  .admin-sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;gap:4px;box-shadow:2px 0 10px rgba(1,75,143,.07)}
+  .admin-sidebar-title{font-size:12px;font-weight:700;color:var(--text3);padding:8px 10px 6px;text-transform:uppercase;letter-spacing:.06em}
+  .admin-nav-item{padding:9px 13px;border-radius:var(--radius);cursor:pointer;font-size:14px;color:var(--text2);transition:all .15s;border:none;background:none;font-family:inherit;text-align:left;width:100%;font-weight:500}
+  .admin-nav-item:hover{background:var(--kq-light);color:var(--kq)}
+  .admin-nav-item.active{background:linear-gradient(90deg,var(--kq-light),var(--ys-light));color:var(--kq);border-left:3px solid var(--kq);padding-left:10px}
+  .admin-panel{padding:28px;overflow-y:auto}
+  .admin-section{display:none}
+  .admin-section.active{display:block}
+
+  /* ══════ DRAW MARKERS (Leaflet.draw overrides) ══════ */
+  .draw-circle-marker{width:10px;height:10px;border-radius:50%;background:#eb5514;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25);cursor:pointer}
+  .draw-circle-marker:hover{background:#c03e08;transform:scale(1.2)}
+  /* DO NOT hide leaflet-mouse-marker — it's required by Leaflet.draw for drawing polygons */
+  .leaflet-editing-icon:hover{transform:none!important;background:#c03e08!important}
+
+  /* ══════ FORMS ══════ */
+  .form-group{margin-bottom:16px}
+  .form-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--kq)}
+  .form-input,.form-select,.form-textarea{width:100%;padding:9px 13px;border:1.5px solid var(--border2);border-radius:var(--radius);font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s,box-shadow .15s}
+  .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--kq);box-shadow:0 0 0 3px rgba(1,75,143,.1)}
+  .form-textarea{resize:vertical;min-height:90px;line-height:1.6}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+  /* ══════ BUTTONS ══════ */
+  .btn{padding:9px 20px;border-radius:var(--radius);border:none;cursor:pointer;font-size:14px;font-family:inherit;transition:all .18s;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .btn-primary{background:var(--grad-accent);color:#fff;box-shadow:0 2px 8px rgba(1,75,143,.25)}
+  .btn-primary:hover{box-shadow:0 4px 14px rgba(1,75,143,.35);transform:translateY(-1px)}
+  .btn-orange{background:var(--grad-btn);color:#fff;box-shadow:0 2px 8px rgba(235,85,20,.28)}
+  .btn-orange:hover{box-shadow:0 4px 14px rgba(235,85,20,.38);transform:translateY(-1px)}
+  .btn-secondary{background:var(--surface);color:var(--kq);border:1.5px solid var(--border2)}
+  .btn-secondary:hover{background:var(--kq-light);border-color:var(--kq)}
+  .btn-danger{background:#fef0f2;color:var(--slq);border:1.5px solid #fdd0d5}
+  .btn-danger:hover{background:#fde8eb}
+  .btn-green{background:linear-gradient(135deg,var(--pb),var(--se));color:#fff}
+  .btn-green:hover{opacity:.9}
+  .btn-sm{padding:5px 13px;font-size:12px}
+  .btn-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+  /* ══════ UPLOAD ══════ */
+  .upload-zone{border:2px dashed var(--kq-pale);border-radius:var(--radius-lg);padding:36px;text-align:center;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,var(--kq-light),var(--ys-light))}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--kq);background:linear-gradient(135deg,#dbeeff,#d5f0fa);box-shadow:0 0 0 4px rgba(1,75,143,.1)}
+  .upload-icon{font-size:34px;margin-bottom:10px}
+  .upload-text{font-size:14px;color:var(--kq);margin-bottom:4px;font-weight:600}
+  .upload-hint{font-size:12px;color:var(--text3)}
+  .file-list{margin-top:14px}
+  .file-item{display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;transition:border-color .15s}
+  .file-item:hover{border-color:var(--kq-pale)}
+  .file-icon{font-size:18px}
+  .file-name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+  .file-size{font-size:11px;color:var(--text3)}
+  .file-del{cursor:pointer;color:var(--text3);font-size:16px;border:none;background:none;border-radius:4px;padding:2px 4px;transition:color .15s}
+  .file-del:hover{color:var(--slq)}
+
+  /* ══════ MODALS ══════ */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,20,50,.45);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s;backdrop-filter:blur(2px)}
+  .modal-overlay.open{opacity:1;pointer-events:all}
+  .modal{background:var(--surface);border-radius:var(--radius-xl);padding:28px;max-width:660px;width:92%;max-height:86vh;overflow-y:auto;box-shadow:0 10px 40px rgba(1,75,143,.18);transform:translateY(14px) scale(.98);transition:transform .22s}
+  .modal-overlay.open .modal{transform:translateY(0) scale(1)}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:14px;border-bottom:1.5px solid var(--kq-pale)}
+  .modal-header h3{font-size:17px;font-weight:700;color:var(--kq)}
+  .modal-close{border:none;background:none;font-size:20px;cursor:pointer;color:var(--text3);padding:2px 8px;border-radius:6px;transition:all .15s;line-height:1}
+  .modal-close:hover{background:var(--kq-light);color:var(--kq)}
+
+  /* ══════ PROJECT DETAIL ══════ */
+  .proj-file-card{background:var(--kq-light);border:1.5px solid var(--kq-pale);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all .18s}
+  .proj-file-card:hover{border-color:var(--kq);background:var(--ys-light);transform:translateY(-2px);box-shadow:var(--shadow-card)}
+  .proj-file-card .icon{font-size:28px;margin-bottom:6px}
+  .proj-file-card .fname{font-size:11px;color:var(--text2);word-break:break-all;line-height:1.3}
+  .empty-tip{text-align:center;padding:36px;color:var(--text3);font-size:13px}
+
+  /* ══════ TOAST ══════ */
+  .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:linear-gradient(135deg,var(--kq),var(--kq-mid));color:#fff;padding:10px 22px;border-radius:20px;font-size:13px;z-index:3000;opacity:0;transition:all .28s;white-space:nowrap;box-shadow:0 4px 16px rgba(1,75,143,.3);font-weight:500}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.warn{background:linear-gradient(135deg,var(--hd),var(--jc))}
+  .toast.err{background:linear-gradient(135deg,var(--slq),#e04060)}
+
+  /* ══════ MAP MARKER ══════ */
+  .custom-marker{width:28px;height:40px;display:flex;align-items:center;justify-content:center}
+  .map-pin{width:28px;height:38px;position:relative;display:flex;align-items:center;justify-content:center}
+  .map-pin svg{width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+  .proj-popup{min-width:210px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  .proj-popup h4{font-size:14px;font-weight:700;margin-bottom:7px;color:#014b8f}
+  .proj-popup p{font-size:12px;color:#555;margin-bottom:4px}
+  .proj-popup .popup-btn{display:inline-block;background:linear-gradient(135deg,#014b8f,#2f90b9);color:#fff;padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer;border:none;margin-top:7px;font-weight:500}
+
+  /* ══════ PHOTO UPLOAD ══════ */
+  .photo-upload-area{width:88px;height:88px;border-radius:50%;position:relative;cursor:pointer}
+  .photo-upload-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(1,75,143,.55);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;flex-direction:column;gap:2px}
+  .photo-upload-area:hover .photo-upload-overlay{opacity:1}
+  .photo-upload-overlay span{color:#fff;font-size:11px;font-weight:600;line-height:1.2;text-align:center}
+  #avatarFileInput{display:none}
+
+  /* ══════ STATS ROW ══════ */
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+  .stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .stat-icon.blue{background:linear-gradient(135deg,var(--kq-light),var(--ys-light))}
+  .stat-icon.orange{background:linear-gradient(135deg,var(--hd-light),var(--lm-light))}
+  .stat-icon.green{background:linear-gradient(135deg,var(--pb-light),#dff5ec)}
+  .stat-num{font-size:24px;font-weight:700;color:var(--kq);line-height:1}
+  .stat-label{font-size:12px;color:var(--text3);margin-top:2px}
+
+  /* ══════ RESPONSIVE ══════ */
+  @media(max-width:700px){
+    .hero-body{flex-direction:column;padding:0 20px 20px}
+    .form-row{grid-template-columns:1fr}
+    .notes-layout{grid-template-columns:1fr;height:auto}
+    .admin-grid{grid-template-columns:1fr;height:auto}
+    .stats-row{grid-template-columns:1fr}
+  }
+
+  /* ══════ LIFE ══════ */
+  /* ══════ LIFE THEME (斑斓的黑：#000000 → #771A3F → #C2CAFC) ══════ */
+  /* Applied to body when the life page is active */
+  body.life-theme{
+    --life-black:#000000;
+    --life-wine:#771A3F;
+    --life-lavender:#C2CAFC;
+    --life-surface:rgba(119,26,63,.18);
+    --life-surface2:rgba(194,202,252,.08);
+    --life-border:rgba(194,202,252,.18);
+    --life-border2:rgba(194,202,252,.32);
+    --life-text:#f0e8f4;
+    --life-text2:#c8b8d8;
+    --life-text3:#8a7a9a;
+    --life-grad-tab:linear-gradient(135deg,#771A3F 0%,#a0336a 100%);
+    --life-grad-hall:linear-gradient(180deg,#1a0810 0%,#0d0a1a 100%);
+    --life-shadow:0 4px 24px rgba(119,26,63,.35);
+    --life-shadow-lg:0 8px 40px rgba(119,26,63,.5);
+  }
+
+  /* Page background */
+  body.life-theme #page-life{
+    min-height:calc(100vh - 58px);
+    background:linear-gradient(160deg,#0d0006 0%,#2a0a1a 40%,#1a1a38 100%);
+    background-attachment:fixed;
+    max-width:none;
+    padding:32px 24px 48px;
+    animation:lifeFadeIn .4s ease;
+  }
+  @keyframes lifeFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* Nav tint */
+  body.life-theme nav{
+    background:linear-gradient(90deg,#0d0006 0%,#3a0f20 60%,#1a1a38 100%);
+  }
+  /* Tabs */
+  .life-tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+  .life-tab{padding:10px 22px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;font-family:inherit;color:var(--text2);transition:all .2s;font-weight:500}
+  .life-tab:hover{border-color:var(--kq-mid);color:var(--kq)}
+  .life-tab.active{background:var(--grad-accent);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(1,75,143,.25)}
+
+  body.life-theme .life-tabs{gap:10px;margin-bottom:28px}
+  body.life-theme .life-tab{
+    background:rgba(119,26,63,.25);
+    border:1.5px solid rgba(194,202,252,.2);
+    color:var(--life-text2);
+    backdrop-filter:blur(6px);
+  }
+  body.life-theme .life-tab:hover{
+    border-color:var(--life-lavender);
+    color:var(--life-lavender);
+    background:rgba(194,202,252,.12);
+  }
+  body.life-theme .life-tab.active{
+    background:var(--life-grad-tab);
+    color:#fff;
+    border-color:transparent;
+    box-shadow:0 2px 12px rgba(119,26,63,.6);
+  }
+
+  /* ── Gallery (Art Museum) ── */
+  .gallery-hall{position:relative}
+  .gallery-wall{background:linear-gradient(180deg,#fafafa 0%,#f0f0f0 100%);border-radius:var(--radius-xl);padding:36px 28px 28px;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+  .gallery-wall::before{content:'';position:absolute;top:0;left:0;right:0;height:6px;background:var(--grad-accent);opacity:.15}
+  .gallery-title{text-align:center;font-size:22px;font-weight:700;color:var(--kq);margin-bottom:6px;letter-spacing:.06em}
+  .gallery-subtitle{text-align:center;font-size:13px;color:var(--text3);margin-bottom:28px;font-style:italic}
+  .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
+  .gallery-frame{background:#fff;border:2px solid #e8e8e8;border-radius:4px;padding:12px 12px 14px;box-shadow:0 4px 16px rgba(0,0,0,.08);cursor:pointer;transition:transform .3s,box-shadow .3s;position:relative}
+  .gallery-frame:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 12px 32px rgba(0,0,0,.15);z-index:5}
+  .gallery-frame::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:40%;height:3px;background:rgba(0,0,0,.06);border-radius:50%;filter:blur(2px)}
+  .gallery-img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:2px;background:#f5f5f5}
+  .gallery-caption{font-size:12px;color:var(--text2);text-align:center;margin-top:10px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gallery-empty{text-align:center;padding:60px 20px;color:var(--text3)}
+  .gallery-empty-icon{font-size:56px;opacity:.3;margin-bottom:14px}
+
+  /* Gallery – life theme override */
+  body.life-theme .gallery-wall{
+    background:var(--life-grad-hall);
+    border:1px solid rgba(194,202,252,.12);
+    box-shadow:var(--life-shadow-lg);
+  }
+  body.life-theme .gallery-wall::before{
+    background:linear-gradient(90deg,#771A3F,#C2CAFC,#771A3F);
+    opacity:.6;
+    height:3px;
+  }
+  body.life-theme .gallery-title{color:var(--life-lavender)}
+  body.life-theme .gallery-subtitle{color:var(--life-text3)}
+  body.life-theme .gallery-frame{
+    background:rgba(30,8,20,.85);
+    border:1.5px solid rgba(194,202,252,.18);
+    box-shadow:0 4px 20px rgba(0,0,0,.45);
+  }
+  body.life-theme .gallery-frame:hover{
+    box-shadow:0 12px 36px rgba(119,26,63,.55);
+    border-color:rgba(194,202,252,.45);
+  }
+  body.life-theme .gallery-img{background:#1a0810}
+  body.life-theme .gallery-caption{color:var(--life-text2)}
+  body.life-theme .gallery-empty{color:var(--life-text3)}
+
+  /* ── Cycling List ── */
+  .cycling-list{display:flex;flex-direction:column;gap:16px}
+  .cycling-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;box-shadow:var(--shadow-card);cursor:pointer;transition:all .2s}
+  .cycling-card:hover{box-shadow:var(--shadow-lg);transform:translateX(4px)}
+  .cycling-card-img{width:180px;min-height:140px;object-fit:cover;flex-shrink:0;background:#f0f3f7}
+  .cycling-card-body{padding:18px 22px;flex:1;display:flex;flex-direction:column;justify-content:center}
+  .cycling-card-title{font-size:16px;font-weight:700;color:var(--kq);margin-bottom:6px}
+  .cycling-card-desc{font-size:13px;color:var(--text2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .cycling-card-date{font-size:12px;color:var(--text3);margin-top:8px}
+  .cycling-empty{text-align:center;padding:60px 20px;color:var(--text3)}
+
+  /* Cycling – life theme override */
+  body.life-theme .cycling-card{
+    background:rgba(20,5,15,.75);
+    border:1px solid rgba(194,202,252,.14);
+    box-shadow:0 3px 16px rgba(0,0,0,.4);
+    backdrop-filter:blur(4px);
+  }
+  body.life-theme .cycling-card:hover{
+    box-shadow:0 8px 32px rgba(119,26,63,.5);
+    transform:translateX(6px);
+    border-color:rgba(194,202,252,.32);
+  }
+  body.life-theme .cycling-card-img{background:#1a0810}
+  body.life-theme .cycling-card-title{
+    color:var(--life-lavender);
+    background:linear-gradient(90deg,#C2CAFC,#e8aac0);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+  body.life-theme .cycling-card-desc{color:var(--life-text2)}
+  body.life-theme .cycling-card-date{color:var(--life-text3)}
+  body.life-theme .cycling-empty{color:var(--life-text3)}
+
+  /* ── Photo Lightbox ── */
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:3000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity .3s}
+  .lightbox.open{opacity:1;visibility:visible}
+  .lightbox-content{max-width:85vw;max-height:85vh;position:relative;display:flex;flex-direction:column;align-items:center}
+  .lightbox-img{max-width:85vw;max-height:75vh;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+  .lightbox-caption{color:rgba(255,255,255,.9);font-size:15px;margin-top:18px;text-align:center;max-width:600px;line-height:1.6;font-style:italic}
+  .lightbox-close{position:absolute;top:-40px;right:0;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+  .lightbox-close:hover{background:rgba(255,255,255,.3)}
+  .lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+  .lightbox-nav:hover{background:rgba(255,255,255,.25)}
+  .lightbox-nav.prev{left:-60px}
+  .lightbox-nav.next{right:-60px}
+
+  /* ── Admin: Life Upload ── */
+  .life-upload-category{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .life-upload-cat-btn{padding:8px 18px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--text2);transition:all .15s}
+  .life-upload-cat-btn.active{background:var(--kq-light);border-color:var(--kq);color:var(--kq);font-weight:600}
+  .life-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:16px}
+  .life-photo-item{position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:#f0f3f7}
+  .life-photo-item img{width:100%;aspect-ratio:1;object-fit:cover;cursor:pointer}
+  .life-photo-item .life-photo-desc{font-size:12px;color:var(--text2);padding:8px 10px;border-top:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .life-photo-item .life-photo-del{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+  .life-photo-item:hover .life-photo-del{opacity:1}
+  .life-photo-item .life-photo-edit{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;background:rgba(1,75,143,.65);color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+  .life-photo-item:hover .life-photo-edit{opacity:1}
+  .life-desc-input{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;margin-top:6px}
+
+  @media(max-width:768px){
+    .gallery-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+    .cycling-card{flex-direction:column}
+    .cycling-card-img{width:100%;min-height:180px}
+    .lightbox-nav.prev{left:8px}
+    .lightbox-nav.next{right:8px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ NAV ════════════════ -->
+<nav>
+  <div class="nav-brand">结构<span>·</span>工程师</div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showPage('profile')">个人信息</button>
+    <button class="nav-link" onclick="showPage('projects')">项目展示</button>
+    <button class="nav-link" onclick="showPage('notes')">笔记心得</button>
+    <button class="nav-link" onclick="showPage('life')">生活</button>
+  </div>
+  <button class="nav-admin" id="adminBtn" onclick="toggleAdmin()">⚙ 后台管理</button>
+</nav>
+
+<main>
+
+<!-- ════════════════ PROFILE ════════════════ -->
+<div class="page active" id="page-profile">
+
+  <!-- Hero -->
+  <div class="profile-hero">
+    <div class="hero-banner"></div>
+    <div class="hero-body">
+      <div class="avatar-wrap">
+        <div class="photo-upload-area" onclick="document.getElementById('avatarFileInput').click()" title="点击上传照片">
+          <div class="avatar" id="avatarDisplay"><span id="avatarInitials">工</span></div>
+          <div class="photo-upload-overlay">
+            <span>📷</span><span>上传照片</span>
+          </div>
+        </div>
+        <input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarUpload(event)">
+      </div>
+      <div class="profile-info">
+        <h1 id="dispName">（请在后台填写姓名）</h1>
+        <span class="title-badge" id="dispTitle">结构工程师</span>
+        <div class="meta-row">
+          <div class="meta-item" id="dispOrg"></div>
+          <div class="meta-item" id="dispEmail"></div>
+          <div class="meta-item" id="dispPhone"></div>
+          <div class="meta-item" id="dispCity"></div>
+        </div>
+        <div class="profile-bio" id="dispBio"></div>
+      </div>
+    </div>
+  </div>
+
+<!-- Timeline Columns -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px" id="profileCols">
+    <div class="card">
+      <div class="section-title" style="font-size:15px">教育经历</div>
+      <div class="timeline timeline-scroll" id="tlEducation"></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="font-size:15px">科研经历</div>
+      <div class="timeline timeline-scroll" id="tlResearch"></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="font-size:15px">工作经历</div>
+      <div class="timeline timeline-scroll" id="tlWork"></div>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card">
+      <div class="stat-icon blue">🏗</div>
+      <div><div class="stat-num" id="statProj">0</div><div class="stat-label">参与项目</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange">📅</div>
+      <div><div class="stat-num" id="statYears">—</div><div class="stat-label">从业年限</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">📝</div>
+      <div><div class="stat-num" id="statNotes">0</div><div class="stat-label">笔记篇数</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title" style="font-size:15px">专业技能</div>
+    <div class="skills-grid" id="skillsGrid"></div>
+  </div>
+</div>
+
+<!-- ════════════════ PROJECTS ════════════════ -->
+<div class="page" id="page-projects">
+  <div class="view-toggle">
+    <button class="toggle-btn active" id="mapToggleBtn" onclick="setProjView('map')">🗺 地图视图</button>
+    <button class="toggle-btn" id="listToggleBtn" onclick="setProjView('list')">☰ 列表视图</button>
+    <div style="flex:1"></div>
+    <input type="text" class="form-input" style="width:210px;padding:7px 12px" placeholder="搜索项目名称…" id="projSearch" oninput="renderProjectList()">
+    <select class="form-select" style="width:136px" id="projTypeFilter" onchange="renderProjectList()">
+      <option value="">全部结构</option>
+      <option value="concrete">混凝土</option>
+      <option value="masonry">砌体</option>
+      <option value="steel">钢结构</option>
+      <option value="timber">木结构</option>
+      <option value="other">其他</option>
+    </select>
+  </div>
+
+  <div id="proj-list-view" style="display:none">
+    <div class="proj-table-wrap">
+      <table class="proj-table">
+        <thead><tr>
+          <th style="width:36px">#</th>
+          <th>项目名称</th>
+          <th style="width:160px">时间</th>
+          <th style="width:130px">结构类型</th>
+          <th style="width:120px">地区</th>
+        </tr></thead>
+        <tbody id="projTableBody"></tbody>
+      </table>
+      <div class="empty-tip" id="projEmpty" style="display:none">暂无项目，请在后台管理中添加</div>
+    </div>
+  </div>
+
+  <div id="proj-map-view">
+    <div id="map-container">
+      <div id="map"></div>
+      <div class="map-search-box">
+        <input type="text" id="mapSearchCity" value="上海" title="限定城市" style="width:64px;padding:10px 6px;font-size:12px;border-right:1px solid var(--border);text-align:center">
+        <input type="text" id="mapSearchInput" placeholder="搜索地址…" onkeydown="if(event.key==='Enter')searchMapAddress()" style="flex:1">
+        <button onclick="searchMapAddress()">🔍</button>
+        <div class="map-search-results" id="mapSearchResults"></div>
+      </div>
+      <div class="map-layer-switch">
+        <button class="layer-switch-btn active" onclick="switchBaseLayer('satellite')" id="layerBtnSatellite">🛰 卫星</button>
+        <button class="layer-switch-btn" onclick="switchBaseLayer('terrain')" id="layerBtnTerrain">⛰ 地形</button>
+        <button class="layer-switch-btn" onclick="switchBaseLayer('street')" id="layerBtnStreet">🗺 街道</button>
+      </div>
+      <div class="map-polygon-toggle" id="polygonToggle" onclick="togglePolygons()" title="显示/隐藏项目图斑">
+        <span class="polygon-toggle-icon" id="polygonToggleIcon">✅</span>
+        <span class="polygon-toggle-label">图斑可见</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ NOTES ════════════════ -->
+<div class="page" id="page-notes">
+  <div class="notes-layout">
+    <div class="notes-sidebar">
+      <div class="notes-sidebar-header">
+        <h3>笔记列表</h3>
+      </div>
+      <div style="padding:8px 10px;border-bottom:1px solid var(--border)">
+        <input type="text" class="form-input" style="padding:6px 10px;font-size:13px" placeholder="搜索笔记…" id="noteSearch" oninput="renderNoteList()">
+      </div>
+      <div class="note-list" id="noteList"></div>
+    </div>
+    <div class="note-content" id="noteContent">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3)">
+        <div style="font-size:48px;margin-bottom:14px;opacity:.6">📝</div>
+        <div style="font-size:14px">选择或新建一篇笔记开始写作</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ LIFE ════════════════ -->
+<div class="page" id="page-life">
+  <div class="life-tabs">
+    <button class="life-tab active" onclick="switchLifeTab('painting',this)">🎨 绘画</button>
+    <button class="life-tab" onclick="switchLifeTab('photography',this)">📷 摄影</button>
+    <button class="life-tab" onclick="switchLifeTab('cycling',this)">🚴 骑行</button>
+  </div>
+  <div id="lifeContent"></div>
+</div>
+
+<!-- ════════════════ ADMIN ════════════════ -->
+<div class="page-full" id="page-admin">
+  <div class="admin-grid">
+    <div class="admin-sidebar">
+      <div class="admin-sidebar-title">管理面板</div>
+      <button class="admin-nav-item active" onclick="showAdminSection('adminProfile',this)">个人信息编辑</button>
+      <button class="admin-nav-item" onclick="showAdminSection('adminProjects',this)">项目管理</button>
+      <button class="admin-nav-item" onclick="showAdminSection('adminMapEdit',this)">地图标记编辑</button>
+      <button class="admin-nav-item" onclick="showAdminSection('adminLife',this)">生活照片管理</button>
+      <button class="admin-nav-item" onclick="showAdminSection('adminNotes',this)">笔记管理</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-orange" style="width:100%;justify-content:center;margin-top:12px;font-size:12px" onclick="publishSite()">📦 导出发布版</button>
+      <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:6px" onclick="toggleAdmin()">← 返回前台</button>
+    </div>
+    <div class="admin-panel">
+
+      <!-- Admin: Profile -->
+      <div class="admin-section active" id="adminProfile">
+        <h2 class="section-title">编辑个人信息</h2>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">姓名</label><input class="form-input" id="adminName" placeholder="请输入姓名"></div>
+          <div class="form-group"><label class="form-label">职称/职务</label><input class="form-input" id="adminTitle" placeholder="如：助理工程师"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">单位</label><input class="form-input" id="adminOrg" placeholder="上海市建筑科学研究院"></div>
+          <div class="form-group"><label class="form-label">城市</label><input class="form-input" id="adminCity" placeholder="上海"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="adminEmail" placeholder="email@example.com"></div>
+          <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="adminPhone" placeholder="13800000000"></div>
+        </div>
+        <div class="form-group"><label class="form-label">个人简介</label><textarea class="form-textarea" id="adminBio" rows="4" placeholder="简要介绍自己的专业方向、研究兴趣…"></textarea></div>
+        <div class="form-group"><label class="form-label">专业技能（每行一项）</label><textarea class="form-textarea" id="adminSkills" rows="4" placeholder="结构安全鉴定&#10;混凝土检测&#10;砌体结构评估&#10;有限元分析"></textarea></div>
+        <hr style="border:none;border-top:1.5px solid var(--kq-pale);margin:22px 0">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--kq)">教育经历</h3>
+        <div id="eduList"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addTLItem('edu')">+ 添加教育经历</button>
+        <hr style="border:none;border-top:1.5px solid var(--kq-pale);margin:22px 0">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--kq)">科研经历</h3>
+        <div id="resList"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addTLItem('res')">+ 添加科研经历</button>
+        <hr style="border:none;border-top:1.5px solid var(--kq-pale);margin:22px 0">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--kq)">工作经历</h3>
+        <div id="workList"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addTLItem('work')">+ 添加工作经历</button>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveProfile()">保存个人信息</button></div>
+      </div>
+
+      <!-- Admin: Projects -->
+      <div class="admin-section" id="adminProjects">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <h2 class="section-title" style="margin:0;border:none;padding:0">项目管理</h2>
+          <button class="btn btn-orange" onclick="openAddProject()">+ 新增项目</button>
+        </div>
+        <div id="adminProjList"></div>
+      </div>
+
+      <!-- Admin: Map Edit -->
+      <div class="admin-section" id="adminMapEdit">
+        <h2 class="section-title">地图标记编辑</h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:8px">选择项目后，在地图上点击设定项目位置（标记可拖动调整），或使用右侧工具栏绘制多边形图斑。</p>
+        <div class="form-group"><label class="form-label">选择要标记的项目</label>
+          <select class="form-select" id="mapEditProj" onchange="onMapEditProjChange()"><option value="">请选择项目…</option></select>
+        </div>
+        <div style="position:relative;width:100%;height:460px;border-radius:var(--radius-lg);overflow:hidden;border:1.5px solid var(--kq-pale)">
+          <div id="adminMap" style="width:100%;height:100%"></div>
+          <div class="map-search-box" style="max-width:300px">
+            <input type="text" id="adminMapSearchCity" value="上海" title="限定城市" style="width:60px;padding:9px 4px;font-size:11px;border-right:1px solid var(--border);text-align:center">
+            <input type="text" id="adminMapSearchInput" placeholder="搜索地址…" onkeydown="if(event.key==='Enter')adminSearchMapAddress()" style="flex:1">
+            <button onclick="adminSearchMapAddress()">🔍</button>
+            <div class="map-search-results" id="adminMapSearchResults"></div>
+          </div>
+          <div class="map-layer-switch" style="top:48px">
+            <button class="layer-switch-btn active" onclick="adminSwitchBaseLayer('satellite')" id="adminLayerBtnSatellite">🛰 卫星</button>
+            <button class="layer-switch-btn" onclick="adminSwitchBaseLayer('terrain')" id="adminLayerBtnTerrain">⛰ 地形</button>
+            <button class="layer-switch-btn" onclick="adminSwitchBaseLayer('street')" id="adminLayerBtnStreet">🗺 街道</button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-top:8px">点击地图设定标记 · 点击绘制按钮开始绘制图斑 · 双击完成绘制</p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveMapMarker()">💾 保存位置</button>
+          <button class="btn btn-secondary" onclick="startDrawPolygon()" id="btnDrawPolygon">✏️ 绘制图斑</button>
+          <button class="btn btn-secondary" onclick="cancelDrawing()" id="btnCancelDraw" style="display:none">🚫 取消绘制</button>
+          <button class="btn btn-danger" onclick="clearMapMarker()">🗑 清除位置</button>
+        </div>
+      </div>
+
+      <!-- Admin: Life Photos -->
+      <div class="admin-section" id="adminLife">
+        <h2 class="section-title">生活照片管理</h2>
+        <div class="life-upload-category">
+          <button class="life-upload-cat-btn active" onclick="selectLifeCategory('painting',this)">🎨 绘画</button>
+          <button class="life-upload-cat-btn" onclick="selectLifeCategory('photography',this)">📷 摄影</button>
+          <button class="life-upload-cat-btn" onclick="selectLifeCategory('cycling',this)">🚴 骑行</button>
+        </div>
+        <div class="upload-zone" onclick="document.getElementById('lifeFileInput').click()"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleLifeDrop(event)">
+          <div class="upload-icon">🖼</div>
+          <div class="upload-text">点击或拖拽照片到此处</div>
+          <div class="upload-hint">支持 JPG、PNG、GIF、WebP 等图片格式</div>
+        </div>
+        <input type="file" id="lifeFileInput" multiple accept="image/*" style="display:none" onchange="handleLifeFileSelect(event)">
+        <div class="life-photo-grid" id="lifePhotoGrid"></div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveLifePhotos()">💾 保存照片</button></div>
+      </div>
+
+      <!-- Admin: Notes -->
+      <div class="admin-section" id="adminNotes">
+        <h2 class="section-title">笔记管理</h2>
+        <div style="display:flex;gap:12px;margin-bottom:16px">
+          <button class="btn btn-orange btn-sm" onclick="adminNewNote()">+ 新建笔记</button>
+          <input type="text" class="form-input" style="padding:6px 10px;font-size:13px;max-width:240px" placeholder="搜索笔记…" id="adminNoteSearch" oninput="renderAdminNoteList()">
+        </div>
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:16px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;max-height:460px">
+            <div class="note-list" id="adminNoteList" style="overflow-y:auto"></div>
+          </div>
+          <div id="adminNoteEditor" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;min-height:400px">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:14px">选择或新建一篇笔记开始编辑</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</main>
+
+<!-- ════════ PROJECT MODAL ════════ -->
+<div class="modal-overlay" id="projModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="projModalTitle">项目详情</h3>
+      <button class="modal-close" onclick="closeModal('projModal')">×</button>
+    </div>
+    <div id="projModalContent"></div>
+  </div>
+</div>
+
+<!-- ════════ ADD/EDIT PROJECT MODAL ════════ -->
+<div class="modal-overlay" id="addProjModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="addProjTitle">新增项目</h3>
+      <button class="modal-close" onclick="closeModal('addProjModal')">×</button>
+    </div>
+    <div class="form-group"><label class="form-label">项目名称</label><input class="form-input" id="fp_name" placeholder="请输入完整项目名称"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">时间</label><input class="form-input" id="fp_date" placeholder="2024.03 — 2024.09"></div>
+      <div class="form-group"><label class="form-label">地区</label><input class="form-input" id="fp_region" placeholder="如：上海市"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">结构类型</label><input class="form-input" id="fp_struct_type" placeholder="如：钢筋混凝土框架"></div>
+      <div class="form-group"><label class="form-label">结构层数</label><input class="form-input" id="fp_struct_floors" placeholder="如：6层 / 地上5层地下1层"></div>
+    </div>
+    <div class="form-group"><label class="form-label">项目简介</label><textarea class="form-textarea" id="fp_desc" placeholder="简要描述项目背景、检测内容、主要结论…"></textarea></div>
+    <div class="form-group">
+      <label class="form-label">项目封面照片</label>
+      <div id="fp_cover_preview" style="margin-bottom:8px"></div>
+      <input type="file" id="fp_cover_file" accept="image/*" onchange="previewProjCover(this)" style="display:none">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fp_cover_file').click()">选择照片</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="fp_cover_clear_btn" style="display:none;margin-left:6px;color:var(--slq)" onclick="clearProjCover()">移除照片</button>
+    </div>
+    <input type="hidden" id="fp_id">
+    <input type="hidden" id="fp_cover_data">
+    <div class="btn-row">
+      <button class="btn btn-orange" onclick="saveProject()">保存</button>
+      <button class="btn btn-secondary" onclick="closeModal('addProjModal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div class="modal-header">
+      <h3>🔒 后台管理</h3>
+      <button class="modal-close" onclick="closeModal('pwdModal')">&times;</button>
+    </div>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:14px">请输入口令进入后台管理</p>
+    <input type="password" id="pwdInput" class="form-input" placeholder="请输入口令" style="text-align:center;font-size:18px;letter-spacing:4px" onkeydown="if(event.key==='Enter')checkPwd()">
+    <p id="pwdError" style="color:var(--slq);font-size:12px;margin-top:8px;min-height:18px"></p>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-orange" onclick="checkPwd()">确认</button>
+      <button class="btn btn-secondary" onclick="closeModal('pwdModal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+//  DATA STORE
+// ══════════════════════════════════════
+const DB={
+  get(k){try{return JSON.parse(localStorage.getItem('pb_'+k))||null}catch{return null}},
+  set(k,v){localStorage.setItem('pb_'+k,JSON.stringify(v))},
+  del(k){localStorage.removeItem('pb_'+k)}
+};
+
+// ══════════════════════════════════════
+//  IndexedDB STORE (for images & files)
+// ══════════════════════════════════════
+const idbCache={};  // key -> objectURL (in-memory cache for sync access)
+let idbReady=false;
+let idbDB=null;
+
+function initIDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open('personal_board',1);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('files')){
+        db.createObjectStore('files',{keyPath:'key'});
+      }
+    };
+    req.onsuccess=e=>{
+      idbDB=e.target.result;
+      idbReady=true;
+      resolve(idbDB);
+    };
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+
+function idbPut(key,blob){
+  return new Promise((resolve,reject)=>{
+    if(!idbDB){reject(new Error('IDB not ready'));return}
+    const tx=idbDB.transaction('files','readwrite');
+    tx.objectStore('files').put({key,blob});
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+
+function idbGet(key){
+  return new Promise((resolve,reject)=>{
+    if(!idbDB){resolve(null);return}
+    const tx=idbDB.transaction('files','readonly');
+    const req=tx.objectStore('files').get(key);
+    req.onsuccess=()=>resolve(req.result?req.result.blob:null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+function idbDelete(key){
+  return new Promise((resolve,reject)=>{
+    if(!idbDB){resolve();return}
+    const tx=idbDB.transaction('files','readwrite');
+    tx.objectStore('files').delete(key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+
+function idbGetAllKeys(){
+  return new Promise((resolve,reject)=>{
+    if(!idbDB){resolve([]);return}
+    const tx=idbDB.transaction('files','readonly');
+    const req=tx.objectStore('files').getAllKeys();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+// Cache an object URL from a blob (revoke old one if exists)
+function cacheURL(key,blob){
+  if(idbCache[key]) URL.revokeObjectURL(idbCache[key]);
+  idbCache[key]=URL.createObjectURL(blob);
+  return idbCache[key];
+}
+
+// Synchronous access to cached URL
+function getCachedURL(key){
+  return idbCache[key]||'';
+}
+
+// ══════════════════════════════════════
+//  Canvas Image Compression
+// ══════════════════════════════════════
+function compressImage(file,maxDim=1600,quality=0.75){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        let {width:w,height:h}=img;
+        if(w>maxDim||h>maxDim){
+          if(w>=h){h=Math.round(h*maxDim/w);w=maxDim}
+          else{w=Math.round(w*maxDim/h);h=maxDim}
+        }
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=>{
+          if(blob) resolve(blob);
+          else reject(new Error('Compression failed'));
+        },'image/jpeg',quality);
+      };
+      img.onerror=()=>reject(new Error('Image load failed'));
+      img.src=ev.target.result;
+    };
+    reader.onerror=()=>reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Compress from a DataURL string (for migration)
+function compressImageFromDataURL(dataURL,maxDim=1600,quality=0.75){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(w>maxDim||h>maxDim){
+        if(w>=h){h=Math.round(h*maxDim/w);w=maxDim}
+        else{w=Math.round(w*maxDim/h);h=maxDim}
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      canvas.toBlob(blob=>{
+        if(blob) resolve(blob);
+        else reject(new Error('Compression failed'));
+      },'image/jpeg',quality);
+    };
+    img.onerror=()=>reject(new Error('Image load failed'));
+    img.src=dataURL;
+  });
+}
+
+// Check if a filename is an image
+
+
+// ══════════════════════════════════════
+//  Data Migration: localStorage DataURL → IDB
+// ══════════════════════════════════════
+async function migrateToIDB(){
+  // 1. Migrate avatar
+  const profile=DB.get('profile');
+  if(profile&&profile.avatar&&profile.avatar.startsWith('data:')){
+    try{
+      const blob=await compressImageFromDataURL(profile.avatar,400,0.8);
+      await idbPut('avatar',blob);
+      cacheURL('avatar',blob);
+      profile.avatar='__idb__:avatar';
+      DB.set('profile',profile);
+    }catch(e){console.warn('Avatar migration failed:',e)}
+  }else if(profile&&profile.avatar==='__idb__:avatar'){
+    // Already migrated, just load into cache
+    const blob=await idbGet('avatar');
+    if(blob) cacheURL('avatar',blob);
+  }
+
+
+  // 2. Migrate life photos
+  for(const cat of ['painting','photography','cycling']){
+    const photos=DB.get('life_'+cat)||[];
+    let changed=false;
+    for(const p of photos){
+      if(p.data&&p.data.startsWith&&p.data.startsWith('data:')){
+        try{
+          const blob=await compressImageFromDataURL(p.data,1600,0.75);
+          const key='life_'+cat+'_'+p.id;
+          await idbPut(key,blob);
+          cacheURL(key,blob);
+          p.data='__idb__:'+key;
+          changed=true;
+        }catch(e){console.warn('Life photo migration failed:',p.id,e)}
+      }else if(p.data&&p.data.startsWith&&p.data.startsWith('__idb__:')){
+        const key=p.data.substring(8);
+        const blob=await idbGet(key);
+        if(blob) cacheURL(key,blob);
+      }
+    }
+    if(changed) DB.set('life_'+cat,photos);
+  }
+
+  // 3. Migrate project cover photos
+  const projects=DB.get('projects')||[];
+  let projChanged=false;
+  for(const p of projects){
+    if(p.cover&&p.cover.startsWith&&p.cover.startsWith('data:')){
+      try{
+        const blob=await compressImageFromDataURL(p.cover,1200,0.80);
+        const key='proj_cover_'+p.id;
+        await idbPut(key,blob);
+        cacheURL(key,blob);
+        p.cover='__idb__:'+key;
+        projChanged=true;
+      }catch(e){console.warn('Project cover migration failed:',p.id,e)}
+    }else if(p.cover&&p.cover.startsWith&&p.cover.startsWith('__idb__:')){
+      const key=p.cover.substring(8);
+      const blob=await idbGet(key);
+      if(blob) cacheURL(key,blob);
+    }
+  }
+  if(projChanged) DB.set('projects',projects);
+}
+
+// Resolve a data reference to a displayable URL (sync — returns empty if not yet cached)
+function resolveDataURL(data){
+  if(!data) return '';
+  if(data.startsWith('__idb__:')){
+    const key=data.substring(8);
+    return idbCache[key]||'';
+  }
+  return data; // Fallback: old DataURL or plain URL
+}
+
+// ── POST-RENDER IMAGE FIXING (the robust way) ──
+// After rendering HTML, scan for <img data-idb-key="..."> and fill src from cache/IDB
+function fixImageSrcs(container){
+  if(!container) return;
+  const imgs=container.querySelectorAll('img[data-idb-key]');
+  if(imgs.length) console.log('[fixImageSrcs] fixing', imgs.length, 'images, idbReady:', idbReady, '| cache keys:', Object.keys(idbCache).join(',')||'(none)');
+  imgs.forEach(img=>{
+    const key=img.getAttribute('data-idb-key');
+    if(!key) return;
+    if(idbCache[key]){img.src=idbCache[key];img.removeAttribute('data-idb-key');return}
+    // Not in cache yet — load async from IDB
+    if(idbReady&&idbDB){
+      idbGet(key).then(blob=>{
+        if(!blob) return;
+        img.src=cacheURL(key,blob);
+        img.removeAttribute('data-idb-key');
+      }).catch(()=>{});
+    }else{
+      // IDB not ready yet — retry after short delay
+      setTimeout(()=>fixImageSrcs(container),200);
+    }
+  });
+}
+
+// Build an <img> src attribute (returns actual URL or data-idb-key for deferred loading)
+function imgSrc(data){
+  if(!data) return '';
+  if(data.startsWith('__idb__')){
+    const key=data.substring(8);
+    if(idbCache[key]) return idbCache[key];
+    return ''; // Will be filled by fixImageSrcs via data-idb-key attribute on parent/container
+  }
+  return data;
+}
+
+// Pre-load all __idb__: references into cache (best-effort, non-blocking)
+async function preloadLifeRefs(items){
+  if(!items||!items.length) return;
+  const promises=[];
+  for(const p of items){
+    const d=p.data||(p.data===0?'':'');
+    if(d.startsWith&&d.startsWith('__idb__:')){
+      const key=d.substring(8);
+      if(!idbCache[key]&&idbReady&&idbDB){
+        promises.push(idbGet(key).then(b=>{if(b)cacheURL(key,b)}).catch(()=>{}));
+      }
+    }
+  }
+  if(promises.length) await Promise.allSettled(promises);
+}
+
+// Save image to IDB and return reference key
+async function storeImage(blob,key){
+  await idbPut(key,blob);
+  cacheURL(key,blob);
+  return '__idb__:'+key;
+}
+
+// ══════════════════════════════════════
+//  SEED DATA (preloaded data for first-time visitors)
+//  Generated from: localStorage data (images use images/ relative paths)
+// ══════════════════════════════════════
+const SEED_DATA={"ls":{"projects":[{"id":"p_1782053905180","name":"吴兴路83、85号文物勘察","date":"2026.1","type":"testing","region":"上海市徐汇区吴兴路83、85号","client":"","desc":"吴兴路83、85号（吴昆生旧居）花园洋房是徐汇区文物保护点，房始建于 1938 年，自 1940 年起，该房产由上海著名企业家、荣氏企业集团旗下申新纺织第九厂总经理吴昆生及其子吴中一持有并居住，直至1946 年吴氏家族迁居香港。此后，该建筑曾由荣毅仁（曾任中华人民共和国副主席）、荣鸿仁、胡文炳、刘靖基等多位工商界爱国人士居住。其后房屋被“船王”包玉刚先生接手。2014 年，包玉刚之女包陪慧将该建筑移交隐居集团，改造为酒店使用。房屋历经多次拆改、改建，结构体系不完整，存在较大的结构体系缺陷。","lat":31.202942391613796,"lng":121.44409485356113,"polygon":[[31.202940099443595,121.44398758274919],[31.20303178710087,121.44413776188587],[31.202949268213303,121.44421821499486],[31.202848411697417,121.44403585461458]],"struct_type":"混合结构","struct_floors":"3层（局部2层、1层）","cover":"__idb__:proj_cover_1782551093855_gwl3ly"},{"id":"p_1782060050834","name":"黄石市人民政府驻上海（华东）联络处装修项目结构安全性（含抗震）检测","date":"2025.7-2025.11","type":"testing","region":"上海市徐汇区黄石路1号","client":"","desc":"黄石市人民政府驻上海（华东）联络处位于黄石路1号，房屋共6层，总建筑面积约3000平方米，1~3层为酒店，4层为黄石市人民政府驻上海（华东）联络处办公室，5~6层为公寓，现4~6层拟进行装修改造。推测房屋历史上经多次拆改，包括拆墙、后开门洞、后加钢结构阳台、后加电梯井、屋面加建等。房屋结构局部安全性与抗震性能不满足要求。","struct_type":"砖混结构","struct_floors":"6层","cover":"__idb__:proj_cover_1782552076958_mp7jrz","lat":31.157221823369667,"lng":121.4504682576079,"polygon":[[31.15721379686741,121.45020665602875],[31.157355981350168,121.45067888041774],[31.157227556665386,121.45074864083887],[31.15708995859571,121.4502388531462]]},{"id":"p_1782553673268","name":"中远海运集团档案中心装修项目结构安全性（含抗震）检测","date":"2025.9-2025.11","region":"上海市浦东新区栖山路1777号9#楼","struct_type":"钢框架结构","struct_floors":"地下1层，地上5层","desc":"中远海运集团档案中心位于栖山路1777号9#楼，房屋地上5层，地下1层，地下一层为地下车库，一~五层为办公室，现一~二层拟进行装修改造，改造后为中远海运集团档案中心档案室及陈列展览厅。房屋目前使用状况良好，除地下室梁柱普遍箍筋锈胀外无明显结构性损伤。后续装修改造需对钢结构进行局部加固。","cover":"__idb__:proj_cover_1782553671100_fy7ytm","lat":31.2611094079801,"lng":121.57016479065493,"polygon":[[31.261148351327098,121.56998770650905],[31.26126289030198,121.57022381870354],[31.261061301613207,121.5703579733595],[31.260965088678127,121.57008966404759]]},{"id":"p_1782554220456","name":"上海大学机械楼辅楼安全性（含抗震）检测","date":"2025.10","region":"上海市静安区延长路149号上海大学（延长校区）内","struct_type":"原建混合结构，扩建单跨混凝土框架结构","struct_floors":"2层","desc":"上海大学机械楼辅楼位于延长路149号，房屋分为原建与扩建两部分，两部分结构独立、中间设有变形缝。房屋原用作教学楼及实验室，现空置，后续拟进行装修用作办公。房屋现存主要问题为原建墙体后开洞及扩建为单跨框架，扩建结构体系缺陷。房屋安全性基本满足要求，抗震性能不满足要求，后续需对结构进行加固补强。","cover":"__idb__:proj_cover_1782554219063_rkleez","lat":31.274873701940876,"lng":121.4595070668163,"polygon":[[31.274903477792808,121.45933669040325],[31.27498593384717,121.45963719683259],[31.27484850704983,121.45969622488121],[31.274756889073696,121.45935815514817]]},{"id":"p_1782554746207","name":"南京东路558号局部装修项目结构安全性（含抗震）检测","date":"2025.11-2026.6","region":"上海市黄浦区南京东路558号","struct_type":"钢框架结构","struct_floors":"地下1层，地上7层","desc":"南京东路558号分为A区和B区，A区为地下1层，地上7层，B区为地上1层（局部有夹层），中间设有变形缝。本次检测范围为A区东部1~3层，现用作商业，后续拟进行装修改造，使用功能不变。房屋原为无梁楼盖结构，于2023年托换为钢框架结构，现使用状况良好，结构安全性与抗震性能均基本满足要求。","cover":"__idb__:proj_cover_1782554743574_t0msgr","lat":31.23599079120845,"lng":121.47930441707516,"polygon":[[31.236176393959543,121.47910452663776],[31.236226804455537,121.4794157654396],[31.235805188569838,121.47950699060569],[31.23575477784889,121.4791903856176]]},{"id":"p_1782555487362","name":"南京东路233-257号南京大楼优秀历史建筑五至七层专项检测","date":"2026.1-2026.5","region":"上海市黄浦区南京东路233-257号","struct_type":"主体结构为混凝土框架结构，内天井后建钢框架结构","struct_floors":"地下1层，地上7层","desc":"南京大楼位于南京东路233-257号，原名哈同大楼。德利洋行设计，陈永兴营造厂施工，原建房屋竣工于1935年。大楼目前主要用于商业及办公。2015年8月17日，上海市人民政府公布南京大楼为上海市第五批优秀历史建筑。现拟对南京大楼五~七层进行装修，后续用作酒店及办公。大楼原为6层钢筋混凝土结构，1990年代前后在屋面上加建1层混凝土结构，1993年内天井内部加建7层钢结构并局部开挖、建造1层地下室（天井内新增钢结构、新建地下室与大楼主体结构脱开），2000年代左右在七层屋面上局部加建1层钢结构。房屋经多次改扩建及加固，现结构性损伤较多，内天井后建钢结构结构体系缺陷，本次补测大量结构数据并修正测绘图纸用于后续设计单位进行加固设计。","cover":"__idb__:proj_cover_1782555484611_cjqkwe","lat":31.237437786670828,"lng":121.48532583678883,"polygon":[[31.23756381148779,121.48497569313676],[31.23776545034894,121.4855391426918],[31.237275100550875,121.48570549446521],[31.237146784295703,121.48508301686155]]},{"id":"p_1782570670216","name":"国阳大厦幕墙结构安全性检测","date":"2026.3-2026.4","region":"上海市杨浦区国权路108号","struct_type":"明框/半隐框玻璃幕墙、石材幕墙","struct_floors":"地下1层，地上10层","desc":"国阳大厦位于上海市杨浦区国权路108号，房屋竣工于2010年，为地上10层、地下1层钢筋混凝土框架结构，幕墙为半隐框玻璃幕墙（横明竖隐）、明框玻璃幕墙及干挂石材幕墙，局部有铝合金百叶及氟碳铝板造型装饰。对不同类型的幕墙进行了结构承载力计算，确定了承载力不足的范围，后续通过给立柱加中间支撑的方式对承载力不足之处进行了加固。","cover":"__idb__:proj_cover_1782570904450_9ear11","lat":31.288246463992042,"lng":121.51584274616704,"polygon":[[31.287910578996666,121.5155019933409],[31.288542653051028,121.51551809189962],[31.28853349258773,121.5158346968877],[31.288235777046637,121.51589909112256],[31.288235777046637,121.5160976400134],[31.28802050522355,121.51620496373815]]},{"id":"p_1782571186377","name":"北翟路1350号申通地铁基地13号线食堂结构安全性检测","date":"2026.4","region":"上海市长宁区北翟路1350号申通地铁基地内","struct_type":"混凝土框架结构","struct_floors":"2层","desc":"北翟路1350号申通地铁基地13号线食堂位于北翟路1350号申通地铁基地13号线停车场检修库西南角。房屋现用作食堂、办公及会议室，后续拟进行装修改造，一层仍用作食堂，二层用作会议室。为满足会议室使用需要，拆除二层两根中柱及周围梁板，新做钢结构-压型钢板组合楼板，抬高了会议室区域屋面标高，并对原二层洞口进行封堵。","cover":"__idb__:proj_cover_1782571184489_8la4wz","lat":31.22827203258757,"lng":121.34434310930232,"polygon":[[31.228463379400832,121.34423712712409],[31.228073811043586,121.3442478594966],[31.22807839421006,121.34445714075989],[31.228472545695787,121.3444303098287]]},{"id":"p_1782571799550","name":"浦江园区CD厂房沉降监测","date":"2025.3-2026.3","region":"上海市闵行区万芳路965、969号","struct_type":"混凝土框架结构","struct_floors":"","desc":"C、D厂房于2021年进行改造设计，因使用荷载增加，部分楼层进行过结构加固，外墙于2023年进行过整体修缮。目前C、D厂房外墙面存在一定程度的开裂、空鼓现象。每3个月进行一次沉降监测，至监测结束时，C、D厂房沉降基本稳定。","cover":"__idb__:proj_cover_1782571692690_463x3f","lat":31.0876052518109,"lng":121.53311751059327,"polygon":[[31.088683895442713,121.53206305499738],[31.08896846963268,121.53328654545982],[31.086471531544593,121.53412367051303],[31.086297110623626,121.53299677140292]]},{"id":"p_1782572041160","name":"上海交通大学闵行校区东区9、10、12、14号宿舍楼房屋安全性（含抗震）检测","date":"2026.5-2026.6","region":"上海市闵行区东川路800号上海交通大学闵行校区","struct_type":"砖混结构","struct_floors":"主楼6层，辅房1层","desc":"上海交通大学闵行校区东区9#、10#、12#、14#楼建于1999年，由主楼与2栋辅房组成，其中主楼为6层砖混结构，辅房均为单层砖混结构，主要用作学生宿舍，现拟对房屋进行装修。房屋现存在走廊楼板开裂等结构性损伤。房屋结构安全性与抗震性能均基本满足要求。","cover":"__idb__:proj_cover_1782572252059_2nv7rr","lat":31.021854534141408,"lng":121.43692217691655,"polygon":[[31.021421400532873,121.43667747882405],[31.021678617089716,121.437643392347],[31.021862342776583,121.43760046285709],[31.022064440622948,121.43719263270296],[31.022220606846986,121.43675260543144],[31.022142523766977,121.43646283137453],[31.021926646683315,121.43651649323691],[31.021917460413587,121.4367365068727],[31.021706175965313,121.43705847804702],[31.021605126715755,121.43658088747176]]},{"id":"p_1782572765733","name":"大连路隧道管理大楼结构安全性检测","date":"2026.6","region":"上海市杨浦区榆林路192号","struct_type":"混凝土框架结构","struct_floors":"地下2层，地上6层","desc":"大连路隧道管理大楼约建于2003年，房屋为地下2层，地上6层的混凝土框架结构，主要用作办公。房屋结构安全性能基本满足现行规范的要求，依据国家标准《民用建筑可靠性鉴定标准》GB 50292-2015，该房屋结构安全性等级评定为Asu级，安全性基本满足要求。","cover":"__idb__:proj_cover_1782572763761_1cyacz","lat":31.25373484186003,"lng":121.51689415972344,"polygon":[[31.253967374484287,121.51661243494593],[31.253412961705866,121.5169827017964],[31.25352292813565,121.51718661687345],[31.254036103114316,121.516794885278]]}],"files":{"p_1782053905180":[]},"profile":{"name":"王秋茗/Fleiss","title":"助理房屋检测工程师","org":"上海市建筑科学研究院有限公司","city":"上海","email":"wangqiuming_dut@163.com","phone":"","bio":"快乐是选择","skills":["SAP2000 / ETABS 结构分析","YJK / PKPM 结构设计","Abaqus 有限元分析","Revit / BIM 建模","SolidWorks  3D建模","结构检测与鉴定","Python软件开发"],"edu":[{"year":"2023 - 2026","title":"同济大学","sub":"硕士 · 土木工程学院","desc":"主修课程：弹塑性力学、数值分析、结构动力学、高等混凝土结构、高等钢结构等。参加中建西勘院首届青年设计师大赛决赛，获优秀奖。担任同济大学先进技术研究院科研管理岗助管，协助处理科研项目管理事务。"},{"year":"2019 - 2023","title":"大连理工大学","sub":"本科 · 土木工程（国际班）","desc":"主修课程：结构力学、材料力学、理论力学、土力学、钢筋混凝土结构、钢结构等。参加过全国大学生结构设计竞赛、全国木结构设计大赛、国际混凝土龙舟邀请赛等。"}],"work":[{"year":"2025.07 - 至今","title":"助理项目负责人","sub":"上海市建筑科学研究院有限公司","desc":"负责统筹房屋检测项目的各个环节，包括前期沟通、现场检测、报告撰写、结果分析等。参与多种结构形式、多种检测要求的项目，并利用AI，逐步探索房检自动化工作流，独立开发用于报告撰写的半自动化软件。"},{"year":"2024.07 - 2024.09","title":"助理结构工程师（实习）","sub":"华东建筑设计研究院有限公司","desc":"协助结构工程师进行超高层建筑结构设计，使用YJK、SAP2000、ETABS等软件。参与柬埔寨某400米以上超高层地标建筑、阿尔及利亚国家电视台大楼（法语项目）等的设计及建模工作，协助完成YJK模型建立与分析，进行结构优化。"}],"res":[{"year":"2023-2026","title":"节点区后浇高性能混凝土的新型装配式剪力墙抗震性能及平面外作用影响研究","sub":"同济大学","desc":"针对后浇ECC-SGBL装配式剪力墙在平面内外双向作用下的抗震性能开展相关研究，进行了足尺剪力墙低周反复加载试验、有限元模拟等研究工作，并建立了考虑平面外作用的平面内承载力计算方法"}]},"life_cycling":[],"notes":[],"life_photography":[],"life_painting":[{"id":"lp_1782573748238_s6f6z2","name":"微信图片_20260627231851_203_2.jpg","data":"__idb__:life_painting_lp_1782573748238_s6f6z2","desc":"草地小狗","title":"","createdAt":1782573748242},{"id":"lp_1782573748335_9s34yj","name":"微信图片_20260627231852_204_2.jpg","data":"__idb__:life_painting_lp_1782573748335_9s34yj","desc":"玉兰","title":"","createdAt":1782573748340},{"id":"lp_1782573748480_g83uek","name":"微信图片_20260627231853_205_2.jpg","data":"__idb__:life_painting_lp_1782573748480_g83uek","desc":"山寺残阳","title":"","createdAt":1782573748488},{"id":"lp_1782573748646_8a0sfp","name":"微信图片_20260627231854_206_2.jpg","data":"__idb__:life_painting_lp_1782573748646_8a0sfp","desc":"千里江山","title":"","createdAt":1782573748649},{"id":"lp_1782573748698_ruc9gj","name":"微信图片_20260627231856_207_2.jpg","data":"__idb__:life_painting_lp_1782573748698_ruc9gj","desc":"晚秋鹭影","title":"","createdAt":1782573748702},{"id":"lp_1782573748835_huogxa","name":"微信图片_20260627231857_208_2.jpg","data":"__idb__:life_painting_lp_1782573748835_huogxa","desc":"醒狮","title":"","createdAt":1782573748843},{"id":"lp_1782573748979_kdamwv","name":"微信图片_20260627231858_209_2.jpg","data":"__idb__:life_painting_lp_1782573748979_kdamwv","desc":"怒吼醒狮","title":"","createdAt":1782573748989},{"id":"lp_1782573749122_8s8y15","name":"微信图片_20260627231859_210_2.jpg","data":"__idb__:life_painting_lp_1782573749122_8s8y15","desc":"抬头看树","title":"","createdAt":1782573749130},{"id":"lp_1782573749290_oa4njh","name":"微信图片_20260627231900_211_2.jpg","data":"__idb__:life_painting_lp_1782573749290_oa4njh","desc":"雨后青绿","title":"","createdAt":1782573749298}]}}; // @SEED@
+
+function loadData(){
+  // Check if seed data should be loaded (localStorage is empty)
+  const seed=SEED_DATA;
+  if(seed&&seed.ls&&Object.keys(seed.ls).length>0&&!DB.get('profile')){
+    // Determine seed format: old format has seed.profile at root, new format has seed.ls.profile
+    const lsData=seed.ls||{};
+    const hasContent=lsData.profile||lsData.projects||Object.keys(lsData).length>0;
+    if(hasContent){
+      console.log('[Seed] Loading seed data into fresh localStorage...');
+      for(const [k,v] of Object.entries(lsData)){
+        localStorage.setItem('pb_'+k,JSON.stringify(v));
+      }
+      console.log('[Seed] LocalStorage seeded with', Object.keys(lsData).length, 'keys');
+
+      // Handle IDB images if present (old format), queue for async load
+      if(seed.idb&&Object.keys(seed.idb).length){
+        window.__seedIDB=seed.idb;
+        console.log('[Seed] IDB images queued (legacy):', Object.keys(seed.idb).length);
+      }else{
+        // New format: image paths are already images/xxx.jpg — no IDB seed needed
+        console.log('[Seed] Images use file paths (images/ folder), no IDB seed required');
+      }
+    }
+  }
+  // Default profile & collections
+  if(!DB.get('profile')){
+    DB.set('profile',{
+      name:'（请在后台填写姓名）',title:'结构工程师',
+      org:'上海市建筑科学研究院',city:'上海',email:'',phone:'',
+      bio:'从事既有建筑结构安全检测与评估工作，专注于混凝土结构、砌体结构的现场检测与损伤诊断。长期参与房屋安全鉴定及工程质量检测项目。',
+      skills:['结构安全鉴定','混凝土检测','砌体结构评估','有限元分析','现场勘查','图纸审查','裂缝分析'],
+      edu:[{year:'2018–2022',title:'学士，土木工程',sub:'同济大学',desc:''}],
+      res:[{year:'2022–2025',title:'既有建筑结构性能评估',sub:'国家自然科学基金',desc:''}],
+      work:[{year:'2025–至今',title:'结构工程师',sub:'上海市建筑科学研究院',desc:'房屋检测与安全鉴定'}],
+      avatar:null
+    });
+  }
+  if(!DB.get('projects')){DB.set('projects',[])}
+  if(!DB.get('notes')){DB.set('notes',[])}
+  if(!DB.get('files')){DB.set('files',{})}
+  if(!DB.get('life_painting')){DB.set('life_painting',[])}
+  if(!DB.get('life_photography')){DB.set('life_photography',[])}
+  if(!DB.get('life_cycling')){DB.set('life_cycling',[])}
+}
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+let currentPage='profile';
+let adminMapInit=false;
+
+function showPage(name){
+  document.querySelectorAll('.page,.page-full').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
+  const page=document.getElementById('page-'+name);
+  if(page) page.classList.add('active');
+  const labels={profile:'个人',projects:'项目',notes:'笔记',life:'生活'};
+  const btn=[...document.querySelectorAll('.nav-link')].find(b=>b.textContent.includes(labels[name]));
+  if(btn) btn.classList.add('active');
+  document.getElementById('adminBtn').classList.remove('active');
+  currentPage=name;
+  // Apply / remove life theme
+  if(name==='life'){
+    document.body.classList.add('life-theme');
+  }else{
+    document.body.classList.remove('life-theme');
+  }
+  if(name==='projects') initProjectsPage();
+  if(name==='notes') renderNoteList();
+  if(name==='profile') renderStats();
+  if(name==='life') renderLifePage();
+}
+
+let adminAuthed=false;
+
+function toggleAdmin(){
+  const isAdmin=document.getElementById('page-admin').classList.contains('active');
+  if(isAdmin){
+    document.querySelectorAll('.page,.page-full').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
+    document.getElementById('adminBtn').classList.remove('active');
+    showPage(currentPage);
+    return;
+  }
+  if(adminAuthed) return enterAdmin();
+  // Show password modal
+  document.getElementById('pwdInput').value='';
+  document.getElementById('pwdError').textContent='';
+  openModal('pwdModal');
+  setTimeout(()=>document.getElementById('pwdInput').focus(),150);
+}
+
+function checkPwd(){
+  const v=document.getElementById('pwdInput').value;
+  if(v==='03200019'){
+    adminAuthed=true;
+    closeModal('pwdModal');
+    enterAdmin();
+  }else{
+    document.getElementById('pwdError').textContent='口令错误，请重试';
+    document.getElementById('pwdInput').value='';
+    document.getElementById('pwdInput').focus();
+  }
+}
+
+function enterAdmin(){
+    document.body.classList.remove('life-theme'); // Admin always uses default theme
+    document.getElementById('page-admin').classList.add('active');
+    document.getElementById('adminBtn').classList.add('active');
+    loadAdminProfile();
+    renderAdminProjects();
+    populateMapEditSelect();
+}
+
+// Publish: export all data + images → embed seed in HTML + save images to images/ folder
+async function publishSite(){
+  toast('正在导出数据…','ok');
+  // Step 1: Collect all localStorage data
+  const seed={ls:{}};
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key&&key.startsWith('pb_')){
+      const shortKey=key.substring(3);
+      try{seed.ls[shortKey]=JSON.parse(localStorage.getItem(key))}catch{seed.ls[shortKey]=localStorage.getItem(key)}
+    }
+  }
+  const lsKeys=Object.keys(seed.ls);
+
+  // Step 2: Find all __idb__: references and extract images from IDB
+  const imageMap={}; // {idbKey: {mime, data:base64, filename}}
+  let totalRefs=0;
+
+  function scanForIDBRefs(obj,prefix){
+    if(!obj) return;
+    if(typeof obj==='string'&&obj.startsWith('__idb__:')){
+      const key=obj.substring(8);
+      if(!imageMap[key]&&key) imageMap[key]=null; // mark for extraction
+      totalRefs++;
+    }else if(Array.isArray(obj)){
+      obj.forEach((v,i)=>scanForIDBRefs(v,`${prefix}[${i}]`));
+    }else if(typeof obj==='object'){
+      Object.entries(obj).forEach(([k,v])=>scanForIDBRefs(v,`${prefix}.${k}`));
+    }
+  }
+
+  // Scan all LS data for __idb__: references
+  for(const [k,v] of Object.entries(seed.ls)){
+    scanForIDBRefs(v,k);
+  }
+
+  console.log('[Publish] Found', Object.keys(imageMap).length, 'IDB image refs in', totalRefs, 'places');
+
+  // Step 3: Extract each image from IDB
+  if(idbReady&&idbDB){
+    for(const key of Object.keys(imageMap)){
+      try{
+        const blob=await idbGet(key);
+        if(!blob){console.warn('[Publish] IDB key not found:',key);continue}
+        const buf=await blob.arrayBuffer();
+        const bytes=new Uint8Array(buf);
+        let binary='';
+        for(let i=0;i<bytes.length;i++) binary+=String.fromCharCode(bytes[i]);
+        const mime=blob.type||'image/jpeg';
+        // Generate a clean filename from the key
+        const ext=mime==='image/png'?'.png':mime==='image/gif'?'.gif':mime==='image/webp'?'.webp':'.jpg';
+        const filename=key+ext;
+        imageMap[key]={
+          mime:mime,
+          data:btoa(binary),
+          filename:filename
+        };
+      }catch(e){console.warn('[Publish] Failed to extract IDB key:',key,e)}
+    }
+  }
+
+  // Step 4: Rewrite all __idb__:key → images/{filename} in the LS data
+  const rewriteMap={};
+  for(const [key,info] of Object.entries(imageMap)){
+    if(info) rewriteMap['__idb__:'+key]='images/'+info.filename;
+  }
+
+  function deepRewrite(obj){
+    if(!obj) return obj;
+    if(typeof obj==='string'){
+      if(obj.startsWith('__idb__:')&&rewriteMap[obj]) return rewriteMap[obj];
+      return obj;
+    }
+    if(Array.isArray(obj)) return obj.map(deepRewrite);
+    if(typeof obj==='object'){
+      const result={};
+      for(const [k,v] of Object.entries(obj)){
+        result[k]=deepRewrite(v);
+      }
+      return result;
+    }
+    return obj;
+  }
+
+  const seedForPublish={ls:deepRewrite(seed.ls)};
+  const seedJson=JSON.stringify(seedForPublish);
+
+  console.log('[Publish] Rewritten seed, images:', Object.values(imageMap).filter(Boolean).length, '/ found:', Object.keys(imageMap).length);
+
+  // Step 5: Filter out null entries (IDB keys not found), then send to server
+  const cleanImageMap={};
+  for(const [k,v] of Object.entries(imageMap)){if(v!==null) cleanImageMap[k]=v;}
+
+  try{
+    const resp=await fetch('/api/rebuild-html',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({seed:seedJson,image_map:cleanImageMap})
+    });
+    const result=await resp.json();
+    if(result.ok){
+      toast('导出成功！已保存 '+result.images_count+' 张图片到 images/ 文件夹，种子数据已嵌入 index.html。\n将 index.html + images/ 文件夹上传到 GitHub 即可','ok');
+      console.log('[Publish] OK:', result);
+    }else{
+      toast('发布失败：'+result.error,'error');
+    }
+  }catch(e){
+    console.warn('[Publish] Server error:',e);
+    toast('发布失败，请确保本地服务器在运行（python server.py）','error');
+  }
+}
+
+// Legacy exportSeed kept for backward compat
+async function exportSeed(){
+  toast('正在导出数据…','ok');
+  const seed={ls:{},idb:{}};
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key&&key.startsWith('pb_')){
+      const shortKey=key.substring(3);
+      try{seed.ls[shortKey]=JSON.parse(localStorage.getItem(key))}catch{seed.ls[shortKey]=localStorage.getItem(key)}
+    }
+  }
+  if(idbReady&&idbDB){
+    const keys=await idbGetAllKeys();
+    for(const k of keys){
+      try{
+        const blob=await idbGet(k);
+        if(blob){
+          const buf=await blob.arrayBuffer();
+          const bytes=new Uint8Array(buf);
+          let binary='';
+          for(let i=0;i<bytes.length;i++) binary+=String.fromCharCode(bytes[i]);
+          seed.idb[k]=btoa(binary);
+        }
+      }catch(e){console.warn('[Export] Failed to export IDB key:',k,e)}
+    }
+  }
+  const json=JSON.stringify(seed);
+  toast('导出完成！('+Object.keys(seed.ls).length+' LS keys, '+Object.keys(seed.idb).length+' IDB images)','ok');
+  try{
+    const resp=await fetch('/api/seed',{method:'POST',headers:{'Content-Type':'application/json'},body:json});
+    if(resp.ok) console.log('[Seed] Posted to server OK');
+  }catch(e){console.warn('[Seed] Could not post to server:',e)}
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='seed.json';a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showAdminSection(id,el){
+  document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.admin-nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(el) el.classList.add('active');
+  if(id==='adminMapEdit') initAdminMap();
+  if(id==='adminLife') loadLifePhotosAdmin();
+  if(id==='adminNotes') renderAdminNoteList();
+}
+
+// ══════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════
+function renderStats(){
+  const projects=DB.get('projects')||[];
+  const notes=DB.get('notes')||[];
+  const p=DB.get('profile')||{};
+  document.getElementById('statProj').textContent=projects.length;
+  document.getElementById('statNotes').textContent=notes.length;
+  // Estimate years from work experience
+  const workYears=(p.work||[]).map(w=>{
+    const m=w.year.match(/(\d{4})/);
+    return m?new Date().getFullYear()-parseInt(m[1]):0;
+  });
+  const maxY=workYears.length?Math.max(...workYears):0;
+  document.getElementById('statYears').textContent=maxY>0?maxY+'年':'—';
+}
+
+// ══════════════════════════════════════
+//  AVATAR UPLOAD
+// ══════════════════════════════════════
+async function handleAvatarUpload(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  try{
+    const blob=await compressImage(file,400,0.8);
+    const ref=await storeImage(blob,'avatar');
+    const p=DB.get('profile')||{};
+    p.avatar=ref;
+    DB.set('profile',p);
+    updateAvatarDisplay(resolveDataURL(ref),p.name||'工');
+    toast('照片已上传');
+  }catch(err){
+    toast('照片上传失败：'+err.message,'err');
+  }
+}
+
+function updateAvatarDisplay(avatarData,name){
+  const avatarEl=document.getElementById('avatarDisplay');
+  const initials=document.getElementById('avatarInitials');
+  if(avatarData){
+    avatarEl.innerHTML=`<img src="${avatarData}" alt="头像" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><div class="photo-upload-overlay"><span>📷</span><span>更换照片</span></div>`;
+  } else {
+    const ch=(name||'工').slice(-1);
+    avatarEl.innerHTML=`<span id="avatarInitials">${ch}</span>`;
+  }
+}
+
+// ══════════════════════════════════════
+//  PROFILE RENDER
+// ══════════════════════════════════════
+function renderProfile(){
+  const p=DB.get('profile');
+  if(!p) return;
+  document.getElementById('dispName').textContent=p.name||'姓名';
+  document.getElementById('dispTitle').textContent=p.title||'结构工程师';
+  document.getElementById('dispOrg').textContent=p.org||'';
+  document.getElementById('dispEmail').textContent=p.email||'';
+  document.getElementById('dispPhone').textContent=p.phone||'';
+  document.getElementById('dispCity').textContent=p.city||'';
+  document.getElementById('dispBio').textContent=p.bio||'';
+  updateAvatarDisplay(resolveDataURL(p.avatar),p.name);
+  renderTimeline('tlEducation',p.edu||[],'');
+  renderTimeline('tlResearch',p.res||[],'orange');
+  renderTimeline('tlWork',p.work||[],'teal');
+  const sg=document.getElementById('skillsGrid');
+  sg.innerHTML=(p.skills||[]).map(s=>`<div class="skill-tag">${s}</div>`).join('');
+  renderStats();
+}
+
+function renderTimeline(elId,items,dotClass){
+  const el=document.getElementById(elId);
+  if(!el) return;
+  el.innerHTML=items.map(it=>`
+    <div class="tl-item">
+      <div class="tl-dot ${dotClass}"></div>
+      <div class="tl-year">${it.year||''}</div>
+      <div class="tl-title">${it.title||''}</div>
+      <div class="tl-sub">${it.sub||''}</div>
+      ${it.desc?`<div class="tl-desc">${it.desc}</div>`:''}
+    </div>`).join('')||'<div style="color:var(--text3);font-size:13px;padding-left:4px">暂无内容</div>';
+}
+
+// ══════════════════════════════════════
+//  ADMIN PROFILE
+// ══════════════════════════════════════
+function loadAdminProfile(){
+  const p=DB.get('profile')||{};
+  ['adminName','adminTitle','adminOrg','adminCity','adminEmail','adminPhone','adminBio'].forEach(id=>{
+    const key=id.replace('admin','').toLowerCase();
+    document.getElementById(id).value=p[key]||'';
+  });
+  document.getElementById('adminName').value=p.name||'';
+  document.getElementById('adminTitle').value=p.title||'';
+  document.getElementById('adminBio').value=p.bio||'';
+  document.getElementById('adminSkills').value=(p.skills||[]).join('\n');
+  renderAdminTLList('edu',p.edu||[]);
+  renderAdminTLList('res',p.res||[]);
+  renderAdminTLList('work',p.work||[]);
+}
+
+function renderAdminTLList(type,items){
+  const elId={edu:'eduList',res:'resList',work:'workList'}[type];
+  const el=document.getElementById(elId);
+  el.innerHTML=items.map((it,i)=>`
+    <div class="card" style="padding:14px;margin-bottom:10px;background:var(--kq-light)">
+      <div class="form-row">
+        <div class="form-group" style="margin:0"><input class="form-input" placeholder="年份/时段" value="${it.year||''}" data-type="${type}" data-idx="${i}" data-field="year"></div>
+        <div class="form-group" style="margin:0"><input class="form-input" placeholder="标题/职务" value="${it.title||''}" data-type="${type}" data-idx="${i}" data-field="title"></div>
+      </div>
+      <div class="form-row" style="margin-top:8px">
+        <div class="form-group" style="margin:0"><input class="form-input" placeholder="机构/单位" value="${it.sub||''}" data-type="${type}" data-idx="${i}" data-field="sub"></div>
+        <div class="form-group" style="margin:0"><input class="form-input" placeholder="备注说明（可选）" value="${it.desc||''}" data-type="${type}" data-idx="${i}" data-field="desc"></div>
+      </div>
+      <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="removeTLItem('${type}',${i})">删除</button>
+    </div>`).join('');
+}
+
+function addTLItem(type){
+  const p=DB.get('profile')||{};
+  const key={edu:'edu',res:'res',work:'work'}[type];
+  p[key]=p[key]||[];
+  p[key].push({year:'',title:'',sub:'',desc:''});
+  DB.set('profile',p);
+  loadAdminProfile();
+}
+
+function removeTLItem(type,idx){
+  const p=DB.get('profile')||{};
+  p[type].splice(idx,1);
+  DB.set('profile',p);
+  loadAdminProfile();
+}
+
+function saveProfile(){
+  const p=DB.get('profile')||{};
+  p.name=document.getElementById('adminName').value;
+  p.title=document.getElementById('adminTitle').value;
+  p.org=document.getElementById('adminOrg').value;
+  p.city=document.getElementById('adminCity').value;
+  p.email=document.getElementById('adminEmail').value;
+  p.phone=document.getElementById('adminPhone').value;
+  p.bio=document.getElementById('adminBio').value;
+  p.skills=document.getElementById('adminSkills').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  ['edu','res','work'].forEach(type=>{
+    const inputs=document.querySelectorAll(`[data-type="${type}"]`);
+    const map={};
+    inputs.forEach(inp=>{
+      const idx=inp.dataset.idx,field=inp.dataset.field;
+      if(!map[idx]) map[idx]={year:'',title:'',sub:'',desc:''};
+      map[idx][field]=inp.value;
+    });
+    p[type]=Object.values(map);
+  });
+  DB.set('profile',p);
+  renderProfile();
+  toast('个人信息已保存');
+}
+
+// ══════════════════════════════════════
+//  PROJECTS
+// ══════════════════════════════════════
+function initProjectsPage(){
+  setProjView('map');
+}
+
+function setProjView(view){
+  const listView=document.getElementById('proj-list-view');
+  const mapView=document.getElementById('proj-map-view');
+  const mapBtn=document.getElementById('mapToggleBtn');
+  const listBtn=document.getElementById('listToggleBtn');
+  if(view==='list'){
+    listView.style.display='block'; mapView.style.display='none';
+    listBtn.classList.add('active'); mapBtn.classList.remove('active');
+    renderProjectList();
+  } else {
+    listView.style.display='none'; mapView.style.display='block';
+    mapBtn.classList.add('active'); listBtn.classList.remove('active');
+    initMainMap();
+  }
+}
+
+function renderProjectList(){
+  const projects=DB.get('projects')||[];
+  const search=(document.getElementById('projSearch').value||'').toLowerCase();
+  const typeF=document.getElementById('projTypeFilter').value;
+  const tbody=document.getElementById('projTableBody');
+  const empty=document.getElementById('projEmpty');
+  let filtered=projects.filter(p=>{
+    if(search&&!p.name.toLowerCase().includes(search)) return false;
+    if(typeF&&!(p.struct_type||'').toLowerCase().includes(typeF)) return false;
+    return true;
+  });
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.map((p,i)=>{
+    return `<tr onclick="openProjectDetail('${p.id}')">
+      <td style="color:var(--text3);font-weight:600">${i+1}</td>
+      <td><strong style="color:var(--kq)">${p.name}</strong>${p.lat?` <span style="font-size:11px;color:var(--pb)">📍</span>`:''}</td>
+      <td>${p.date||'—'}</td>
+      <td style="font-size:13px;color:var(--text2)">${p.struct_type||'—'}</td>
+      <td>${p.region||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openProjectDetail(projId){
+  const projects=DB.get('projects')||[];
+  const p=projects.find(x=>x.id===projId);
+  if(!p) return;
+  document.getElementById('projModalTitle').textContent=p.name;
+  const coverHtml=p.cover?`<img ${imgAttrs(p.cover)} style="width:100%;max-height:220px;object-fit:cover;border-radius:var(--radius-lg);margin-bottom:16px;display:block">`:'';
+  document.getElementById('projModalContent').innerHTML=`
+    ${coverHtml}
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--text2)">📅 日期：${p.date||'—'}</div>
+      <div style="font-size:13px;color:var(--text2)">📍 地区：${p.region||'—'}</div>
+      ${p.struct_type?`<div style="font-size:13px;color:var(--text2)">🏗 结构类型：${p.struct_type}</div>`:''}
+      ${p.struct_floors?`<div style="font-size:13px;color:var(--text2)">🏢 结构层数：${p.struct_floors}</div>`:''}
+    </div>
+    ${p.desc?`<p style="font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:18px;padding:12px;background:var(--kq-light);border-radius:var(--radius);border-left:3px solid var(--kq)">${p.desc}</p>`:''}
+    <div class="btn-row"><button class="btn btn-secondary btn-sm" onclick="closeModal('projModal')">关闭</button></div>`;
+  openModal('projModal');
+  const mc=document.getElementById('projModalContent');
+  if(mc) setTimeout(()=>fixImageSrcs(mc),50);
+}
+
+
+// ══════════════════════════════════════
+//  MAP
+// ══════════════════════════════════════
+let mainMap=null;
+let mapMarkers=[];
+let mapPolygons=[];
+let mapCenterMarkers=[];
+let currentBaseLayer='satellite';
+let baseLayers={};
+let polygonsVisible=true;
+
+// Shanghai bounds (rough): SW[30.69,120.86] NE[31.87,121.97]
+const SH_BOUNDS=L.latLngBounds(L.latLng(30.69,120.86),L.latLng(31.87,121.97));
+const SH_CENTER=[31.23,121.47];
+const SH_MAX_BOUNDS=L.latLngBounds(L.latLng(29.5,119.5),L.latLng(32.5,123.0));
+
+function initMainMap(){
+  if(mainMap){mainMap.invalidateSize();refreshMapMarkers();return}
+  mainMap=L.map('map',{
+    zoomControl:true,
+    maxBounds:SH_MAX_BOUNDS,
+    maxBoundsViscosity:.8,
+    minZoom:9
+  }).setView(SH_CENTER,11);
+
+  // Satellite (Esri World Imagery) - default
+  baseLayers.satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri, Maxar',maxZoom:19
+  }).addTo(mainMap);
+
+  // Chinese labels overlay for satellite (Gaode/Amap annotation tiles)
+  L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=8',{
+    attribution:'高德',maxZoom:18,opacity:.55
+  }).addTo(mainMap);
+
+  // Terrain with Chinese labels (Gaode terrain + labels)
+  baseLayers.terrain=L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=6',{
+    attribution:'高德',maxZoom:18
+  });
+
+  // Street (Gaode standard map, Chinese labels)
+  baseLayers.street=L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8',{
+    attribution:'高德',maxZoom:18
+  });
+
+  refreshMapMarkers();
+  setTimeout(()=>{if(mainMap) mainMap.invalidateSize()},200);
+}
+
+function switchBaseLayer(type){
+  if(!mainMap||currentBaseLayer===type) return;
+  // Remove all known base layers
+  Object.values(baseLayers).forEach(l=>{if(mainMap.hasLayer(l)) mainMap.removeLayer(l)});
+  // Add new base layer
+  if(baseLayers[type]){ baseLayers[type].addTo(mainMap); mainMap.setZIndex(0) }
+  currentBaseLayer=type;
+  // Update button states
+  document.querySelectorAll('.layer-switch-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('layerBtn'+type.charAt(0).toUpperCase()+type.slice(1));
+  if(btn) btn.classList.add('active');
+}
+
+function createGradientPinIcon(i){
+  return L.divIcon({className:'',html:`<div class="map-pin"><svg viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24C24 5.37 18.63 0 12 0zm0 16a4 4 0 110-8 4 4 0 010 8z" fill="#014b8f"/><circle cx="12" cy="12" r="2.5" fill="#fff"/></svg></div>`,iconSize:[28,40],iconAnchor:[14,40]});
+}
+
+function refreshMapMarkers(){
+  if(!mainMap) return;
+  mapMarkers.forEach(m=>mainMap.removeLayer(m));
+  mapPolygons.forEach(p=>mainMap.removeLayer(p));
+  mapCenterMarkers.forEach(m=>mainMap.removeLayer(m));
+  mapMarkers=[];
+  mapPolygons=[];
+  mapCenterMarkers=[];
+  const projects=DB.get('projects')||[];
+  projects.filter(p=>p.lat&&p.lng).forEach((p,i)=>{
+    const color='#014b8f';
+    const icon=createGradientPinIcon(i);
+
+    // If project has polygon data, draw it instead of circle
+    if(p.polygon&&p.polygon.length>=3){
+      const poly=L.polygon(p.polygon,{
+        color,fillColor:color,fillOpacity:.25,weight:2.5,
+        dashArray:'6 2',opacity:.85
+      });
+      if(polygonsVisible) poly.addTo(mainMap);
+      poly.bindPopup(`<div class="proj-popup">
+        <h4>${p.name}</h4>
+        <p>${p.date||''} · ${p.region||''}</p>
+        ${p.struct_type?`<p>🏗 ${p.struct_type}${p.struct_floors?' · '+p.struct_floors:''}</p>`:''}
+        <button class="popup-btn" onclick="openProjectDetail('${p.id}');mainMap&&mainMap.closePopup()">查看资料</button>
+      </div>`,{maxWidth:250});
+      mapPolygons.push(poly);
+
+      // Marker at center — only show when polygonsVisible is true
+      const centerMarker=L.marker([p.lat,p.lng],{icon});
+      centerMarker.bindPopup(poly.getPopup());
+      if(polygonsVisible) centerMarker.addTo(mainMap);
+      mapCenterMarkers.push(centerMarker);
+    }else{
+      // Fallback to circle + marker
+      const circle=L.circle([p.lat,p.lng],{radius:9000,color,fillColor:color,fillOpacity:.2,weight:2}).addTo(mainMap);
+      const marker=L.marker([p.lat,p.lng],{icon}).addTo(mainMap);
+      marker.bindPopup(`<div class="proj-popup">
+        <h4>${p.name}</h4>
+        <p>${p.date||''} · ${p.region||''}</p>
+        ${p.struct_type?`<p>🏗 ${p.struct_type}${p.struct_floors?' · '+p.struct_floors:''}</p>`:''}
+        <button class="popup-btn" onclick="openProjectDetail('${p.id}');mainMap&&mainMap.closePopup()">查看资料</button>
+      </div>`,{maxWidth:250});
+      mapMarkers.push(marker,circle);
+    }
+
+  });
+}
+
+function togglePolygons(){
+  polygonsVisible=!polygonsVisible;
+  const toggle=document.getElementById('polygonToggle');
+  const icon=document.getElementById('polygonToggleIcon');
+  const label=toggle.querySelector('.polygon-toggle-label');
+  if(polygonsVisible){
+    toggle.classList.remove('off');
+    icon.textContent='✅';
+    label.textContent='图斑可见';
+    mapPolygons.forEach(p=>{if(!mainMap.hasLayer(p)) p.addTo(mainMap)});
+    mapCenterMarkers.forEach(m=>{if(!mainMap.hasLayer(m)) m.addTo(mainMap)});
+  }else{
+    toggle.classList.add('off');
+    icon.textContent='⬜';
+    label.textContent='图斑隐藏';
+    mapPolygons.forEach(p=>{if(mainMap.hasLayer(p)) mainMap.removeLayer(p)});
+    mapCenterMarkers.forEach(m=>{if(mainMap.hasLayer(m)) mainMap.removeLayer(m)});
+  }
+}
+
+// ══════════════════════════════════════
+//  MAP ADDRESS SEARCH (Gaode / Amap)
+// ══════════════════════════════════════
+let searchMarker=null;
+
+const AMAP_KEY='0d8d9f3e664df7f211f14acfc008866a';
+
+async function searchMapAddress(){
+  const q=document.getElementById('mapSearchInput').value.trim();
+  console.log('[Search] input:', q);
+  if(!q) return;
+  const results=document.getElementById('mapSearchResults');
+  results.innerHTML='<div class="map-search-result-item" style="color:var(--text3);cursor:default">搜索中…</div>';
+  results.classList.add('show');
+  try{
+    const city=document.getElementById('mapSearchCity')?document.getElementById('mapSearchCity').value.trim():'上海';
+    console.log('[Search] fetching AMap, city:', city);
+    const resp=await fetch(`https://restapi.amap.com/v3/geocode/geo?key=${AMAP_KEY}&address=${encodeURIComponent(q)}&city=${encodeURIComponent(city)}&output=json`);
+    console.log('[Search] response status:', resp.status);
+    const data=await resp.json();
+    console.log('[Search] API response:', data);
+    if(data.status!=='1'||!data.geocodes||!data.geocodes.length){
+      results.innerHTML='<div class="map-search-result-item" style="color:var(--text3);cursor:default">未找到结果</div>';
+      return;
+    }
+    results.innerHTML=data.geocodes.map(r=>{
+      const [lng,lat]=r.location.split(',');
+      return `<div class="map-search-result-item" data-lat="${lat}" data-lng="${lng}" data-name="${r.formatted_address.replace(/"/g,'&quot;')}" onclick="selectSearchResultItem(this)">📍 ${r.formatted_address}</div>`;
+    }).join('');
+  }catch(e){results.innerHTML='<div class="map-search-result-item" style="color:var(--text3);cursor:default">搜索失败，请重试</div>'}
+}
+
+function selectSearchResultItem(el){
+  const lat=parseFloat(el.dataset.lat);
+  const lng=parseFloat(el.dataset.lng);
+  const name=el.dataset.name;
+  console.log('[Search] clicked result, lat:',lat,'lng:',lng,'name:',name);
+  selectSearchResult(lat,lng,name);
+}
+
+function selectSearchResult(lat,lon,name){
+  if(!mainMap) return;
+  if(searchMarker) mainMap.removeLayer(searchMarker);
+  searchMarker=L.marker([lat,lon],{icon:createGradientPinIcon(99)}).addTo(mainMap).bindPopup(`<b>${name}</b>`).openPopup();
+  mainMap.setView([lat,lon],18);
+  document.getElementById('mapSearchResults').classList.remove('show');
+  document.getElementById('mapSearchInput').value=name.substring(0,60);
+}
+
+// Close search results when clicking elsewhere
+document.addEventListener('click',function(e){
+  const box=document.querySelector('.map-search-box');
+  if(box&&!box.contains(e.target)){
+    document.getElementById('mapSearchResults').classList.remove('show');
+  }
+});
+
+let adminMap=null,adminMapMarker=null,tempLatLng=null;
+let adminDrawControl=null,adminDrawnItems=null;
+let adminBaseLayers={};
+let adminCurrentLayer='satellite';
+let adminSearchMarker=null;
+let isDrawingPolygon=false;
+
+function initAdminMap(){
+  if(adminMapInit) return;
+  adminMapInit=true;
+
+  // Inject CSS for custom draw vertex icon (do this first, before any Leaflet internals run)
+  if(!document.getElementById('drawVertexStyle')){
+    const style=document.createElement('style');
+    style.id='drawVertexStyle';
+    style.textContent=`
+      .draw-vertex-icon{
+        width:10px!important;height:10px!important;
+        border-radius:50%!important;
+        background:#eb5514!important;
+        border:2px solid #fff!important;
+        box-shadow:0 1px 4px rgba(0,0,.4)!important;
+        background-image:none!important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  adminMap=L.map('adminMap',{
+    maxBounds:SH_MAX_BOUNDS,
+    maxBoundsViscosity:.8,
+    minZoom:9
+  }).setView(SH_CENTER,11);
+
+  adminBaseLayers.satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'}).addTo(adminMap);
+  L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=8',{maxZoom:18,opacity:.55,attribution:'高德'}).addTo(adminMap);
+
+  adminBaseLayers.terrain=L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=6',{maxZoom:18,attribution:'高德'});
+  adminBaseLayers.street=L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8',{maxZoom:18,attribution:'高德'});
+
+  adminDrawnItems=new L.FeatureGroup();
+  adminMap.addLayer(adminDrawnItems);
+
+  // Override _getMarkerIcon BEFORE creating the draw control
+  if(L.Draw&&L.Draw.Polygon){
+    L.Draw.Polygon.prototype._getMarkerIcon=function(){
+      return L.divIcon({
+        className:'draw-vertex-icon',
+        iconSize:[10,10],
+        iconAnchor:[5,5]
+      });
+    };
+  }
+
+  adminDrawControl=new L.Control.Draw({
+    draw:{
+      polygon:{
+        shapeOptions:{color:'#eb5514',fillOpacity:.25,weight:3},
+        allowIntersection:false,
+        showArea:true,
+        repeatMode:false
+      },
+      polyline:false,
+      rectangle:false,
+      circle:false,
+      circlemarker:false,
+      marker:false
+    },
+    edit:{featureGroup:adminDrawnItems}
+  });
+
+  // Track whether draw mode is active — uses global isDrawingPolygon
+
+  adminMap.on('click',function(e){
+    // Don't place marker while user is drawing a polygon (draw control is active)
+    if(isDrawingPolygon) return;
+    const sel=document.getElementById('mapEditProj').value;
+    if(!sel) return;  // silently ignore clicks when no project is selected
+    tempLatLng=e.latlng;
+    if(adminMapMarker) adminMap.removeLayer(adminMapMarker);
+    adminMapMarker=L.marker(e.latlng,{icon:createGradientPinIcon(0),draggable:true}).addTo(adminMap);
+    adminMapMarker.on('dragend',function(){tempLatLng=adminMapMarker.getLatLng()});
+  });
+
+  adminMap.on(L.Draw.Event.CREATED,function(e){
+    adminDrawnItems.clearLayers();
+    adminDrawnItems.addLayer(e.layer);
+    tempLatLng=null;
+    if(adminMapMarker){adminMap.removeLayer(adminMapMarker);adminMapMarker=null}
+    // Exit draw mode automatically after finishing
+    isDrawingPolygon=false;
+    if(adminDrawControl) adminMap.removeControl(adminDrawControl);
+    document.getElementById('btnDrawPolygon').style.display='';
+    document.getElementById('btnCancelDraw').style.display='none';
+  });
+
+  // Also reset flag when user cancels drawing via ESC or draw control
+  adminMap.on(L.Draw.Event.DRAWSTART,function(){
+    isDrawingPolygon=true;
+  });
+
+  adminMap.on(L.Draw.Event.DRAWEND,function(){
+    isDrawingPolygon=false;
+  });
+
+  setTimeout(()=>{if(adminMap) adminMap.invalidateSize()},200);
+}
+
+function adminSwitchBaseLayer(type){
+  if(!adminMap||adminCurrentLayer===type) return;
+  Object.values(adminBaseLayers).forEach(l=>{if(adminMap.hasLayer(l)) adminMap.removeLayer(l)});
+  if(adminBaseLayers[type]){adminBaseLayers[type].addTo(adminMap);adminBaseLayers[type].setZIndex(0)}
+  adminCurrentLayer=type;
+  document.querySelectorAll('#adminMapEdit .layer-switch-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('adminLayerBtn'+type.charAt(0).toUpperCase()+type.slice(1));
+  if(btn) btn.classList.add('active');
+}
+
+async function adminSearchMapAddress(){
+  const q=document.getElementById('adminMapSearchInput').value.trim();
+  if(!q) return;
+  const results=document.getElementById('adminMapSearchResults');
+  results.innerHTML='<div class="map-search-result-item" style="color:var(--text3);cursor:default">搜索中…</div>';
+  results.classList.add('show');
+  try{
+    const city=document.getElementById('adminMapSearchCity')?document.getElementById('adminMapSearchCity').value.trim():'上海';
+    const resp=await fetch(`https://restapi.amap.com/v3/geocode/geo?key=${AMAP_KEY}&address=${encodeURIComponent(q)}&city=${encodeURIComponent(city)}&output=json`);
+    const data=await resp.json();
+    if(data.status!=='1'||!data.geocodes||!data.geocodes.length){
+      results.innerHTML='<div class="map-search-result-item" style="color:var(--text3);cursor:default">未找到结果</div>';
+      return;
+    }
+    results.innerHTML=data.geocodes.map(r=>{
+      const [lng,lat]=r.location.split(',');
+      return `<div class="map-search-result-item" data-lat="${lat}" data-lng="${lng}" data-name="${r.formatted_address.replace(/"/g,'&quot;')}" onclick="adminSelectSearchResultItem(this)">📍 ${r.formatted_address}</div>`;
+    }).join('');
+  }catch(e){results.innerHTML='<div class="map-search-result-item" style="color:var(--text3);cursor:default">搜索失败，请重试</div>'}
+}
+
+function adminSelectSearchResultItem(el){
+  const lat=parseFloat(el.dataset.lat);
+  const lng=parseFloat(el.dataset.lng);
+  const name=el.dataset.name;
+  adminSelectSearchResult(lat,lng,name);
+}
+
+function adminSelectSearchResult(lat,lon,name){
+  if(!adminMap) return;
+  if(adminSearchMarker) adminMap.removeLayer(adminSearchMarker);
+  adminSearchMarker=L.marker([lat,lon],{icon:createGradientPinIcon(99)}).addTo(adminMap).bindPopup(`<b>${name}</b>`).openPopup();
+  adminMap.setView([lat,lon],18);
+  document.getElementById('adminMapSearchResults').classList.remove('show');
+  document.getElementById('adminMapSearchInput').value=name.substring(0,60);
+}
+
+// Close admin search results when clicking elsewhere
+document.addEventListener('click',function(e){
+  const box=document.querySelector('#adminMapEdit .map-search-box');
+  if(box&&!box.contains(e.target)){
+    const r=document.getElementById('adminMapSearchResults');
+    if(r) r.classList.remove('show');
+  }
+});
+
+function startDrawPolygon(){
+  const sel=document.getElementById('mapEditProj').value;
+  if(!sel){toast('请先选择项目','warn');return}
+  if(!adminMap) initAdminMap();
+  adminMap.addControl(adminDrawControl);
+  isDrawingPolygon=true;
+  new L.Draw.Polygon(adminMap,adminDrawControl.options.draw.polygon).enable();
+  document.getElementById('btnDrawPolygon').style.display='none';
+  document.getElementById('btnCancelDraw').style.display='';
+}
+
+function cancelDrawing(){
+  isDrawingPolygon=false;
+  if(adminDrawControl) adminMap.removeControl(adminDrawControl);
+  // Note: do NOT clear adminDrawnItems here — the drawn layer may need to be saved
+  document.getElementById('btnDrawPolygon').style.display='';
+  document.getElementById('btnCancelDraw').style.display='none';
+}
+
+function onMapEditProjChange(){
+  const sel=document.getElementById('mapEditProj').value;
+  if(!sel||!adminMap) return;
+  const projects=DB.get('projects')||[];
+  const p=projects.find(x=>x.id===sel);
+  if(!p) return;
+  adminDrawnItems.clearLayers();
+  if(adminMapMarker){adminMap.removeLayer(adminMapMarker);adminMapMarker=null}
+  if(p.lat&&p.lng){
+    tempLatLng=L.latLng(p.lat,p.lng);
+    adminMapMarker=L.marker([p.lat,p.lng],{icon:createGradientPinIcon(0),draggable:true}).addTo(adminMap);
+    adminMapMarker.on('dragend',function(){tempLatLng=adminMapMarker.getLatLng()});
+    adminMap.setView([p.lat,p.lng],13);
+  }else{tempLatLng=null}
+  if(p.polygon&&p.polygon.length>=3){
+    const poly=L.polygon(p.polygon,{color:'#014b8f',fillOpacity:.25,weight:3});
+    adminDrawnItems.addLayer(poly);
+    adminMap.fitBounds(poly.getBounds().pad(.1));
+  }
+  cancelDrawing();
+}
+
+function populateMapEditSelect(){
+  const sel=document.getElementById('mapEditProj');
+  const projects=DB.get('projects')||[];
+  sel.innerHTML='<option value="">请选择项目…</option>'+projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+function saveMapMarker(){
+  const sel=document.getElementById('mapEditProj').value;
+  if(!sel){
+    // Check if there's drawn content to give a more helpful message
+    const drawnLayers=adminDrawnItems?adminDrawnItems.getLayers():[];
+    if(drawnLayers&&drawnLayers.length>0){
+      toast('请先在上方选择要保存的项目','warn');
+    } else {
+      toast('请先选择项目，然后在地图上标记位置或绘制图斑','warn');
+    }
+    return
+  }
+  const drawnLayers=adminDrawnItems.getLayers();
+  if(drawnLayers.length>0){
+    const layer=drawnLayers[0];
+    if(layer instanceof L.Polygon || layer instanceof L.Polyline){
+      const coords=layer.getLatLngs()[0].map(ll=>[ll.lat,ll.lng]);
+      const lat=coords.reduce((s,c)=>s+c[0],0)/coords.length;
+      const lng=coords.reduce((s,c)=>s+c[1],0)/coords.length;
+      const projects=DB.get('projects')||[];
+      const idx=projects.findIndex(p=>p.id===sel);
+      if(idx>=0){
+        projects[idx].lat=lat;
+        projects[idx].lng=lng;
+        projects[idx].polygon=coords;
+        DB.set('projects',projects);
+      }
+      // Clean up draw state without clearing the drawn items
+      isDrawingPolygon=false;
+      if(adminDrawControl) adminMap.removeControl(adminDrawControl);
+      document.getElementById('btnDrawPolygon').style.display='';
+      document.getElementById('btnCancelDraw').style.display='none';
+      // Keep adminDrawnItems so the polygon remains visible on the admin map
+      toast('图斑已保存（'+coords.length+'个顶点）');
+      if(mainMap) refreshMapMarkers();
+      return;
+    }
+  }
+  if(!tempLatLng){toast('请在地图上点击标记位置或绘制图斑','warn');return}
+  const projects=DB.get('projects')||[];
+  const idx=projects.findIndex(p=>p.id===sel);
+  if(idx>=0){projects[idx].lat=tempLatLng.lat;projects[idx].lng=tempLatLng.lng;DB.set('projects',projects);toast('位置已保存')}
+  if(mainMap) refreshMapMarkers();
+}
+
+function clearMapMarker(){
+  const sel=document.getElementById('mapEditProj').value;
+  if(!sel){toast('请先选择项目','warn');return}
+  const projects=DB.get('projects')||[];
+  const idx=projects.findIndex(p=>p.id===sel);
+  if(idx>=0){delete projects[idx].lat;delete projects[idx].lng;delete projects[idx].polygon;DB.set('projects',projects)}
+  if(adminMapMarker){adminMap.removeLayer(adminMapMarker);adminMapMarker=null}
+  adminDrawnItems.clearLayers();
+  tempLatLng=null;
+  cancelDrawing();
+  toast('已清除位置标记');
+  if(mainMap) refreshMapMarkers();
+}
+
+// ══════════════════════════════════════
+//  ADMIN PROJECTS
+// ══════════════════════════════════════
+function renderAdminProjects(){
+  const projects=DB.get('projects')||[];
+  const el=document.getElementById('adminProjList');
+  if(!el) return;
+  if(!projects.length){el.innerHTML='<div class="empty-tip">暂无项目，点击"新增项目"开始添加</div>';return}
+  el.innerHTML=projects.map(p=>`
+    <div class="card" style="padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;color:var(--kq)">${p.name}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">${p.date||''} · ${p.region||''}${p.struct_type?' · '+p.struct_type:''}${p.struct_floors?' · '+p.struct_floors:''}${p.lat?` · 📍已标记`:''}${p.cover?' · 🖼封面':''}</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="openEditProject('${p.id}')">编辑</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">删除</button>
+    </div>`).join('');
+}
+
+function openAddProject(){
+  document.getElementById('addProjTitle').textContent='新增项目';
+  document.getElementById('fp_id').value='';
+  ['fp_name','fp_date','fp_region','fp_struct_type','fp_struct_floors','fp_desc','fp_cover_data'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fp_cover_preview').innerHTML='';
+  document.getElementById('fp_cover_clear_btn').style.display='none';
+  openModal('addProjModal');
+}
+
+function openEditProject(id){
+  const p=(DB.get('projects')||[]).find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('addProjTitle').textContent='编辑项目';
+  document.getElementById('fp_id').value=p.id;
+  document.getElementById('fp_name').value=p.name||'';
+  document.getElementById('fp_date').value=p.date||'';
+  document.getElementById('fp_region').value=p.region||'';
+  document.getElementById('fp_struct_type').value=p.struct_type||'';
+  document.getElementById('fp_struct_floors').value=p.struct_floors||'';
+  document.getElementById('fp_desc').value=p.desc||'';
+  document.getElementById('fp_cover_data').value=p.cover||'';
+  const prevEl=document.getElementById('fp_cover_preview');
+  const clearBtn=document.getElementById('fp_cover_clear_btn');
+  if(p.cover){
+    const url=resolveDataURL(p.cover);
+    if(url){
+      prevEl.innerHTML=`<img src="${url}" style="max-height:120px;border-radius:8px;display:block">`;
+      clearBtn.style.display='';
+    }else{
+      // IDB ref not in cache yet — set placeholder + fix later
+      prevEl.innerHTML=`<img src="" data-idb-key="${p.cover.substring(8)}" style="max-height:120px;border-radius:8px;display:block">`;
+      clearBtn.style.display='';
+      setTimeout(()=>fixImageSrcs(prevEl),100);
+    }
+  }else{prevEl.innerHTML='';clearBtn.style.display='none';}
+  openModal('addProjModal');
+}
+
+function saveProject(){
+  const name=document.getElementById('fp_name').value.trim();
+  if(!name){toast('请输入项目名称','warn');return}
+  const projects=DB.get('projects')||[];
+  const existId=document.getElementById('fp_id').value;
+  const data={name,date:document.getElementById('fp_date').value,region:document.getElementById('fp_region').value,struct_type:document.getElementById('fp_struct_type').value,struct_floors:document.getElementById('fp_struct_floors').value,desc:document.getElementById('fp_desc').value,cover:document.getElementById('fp_cover_data').value};
+  if(existId){
+    const idx=projects.findIndex(p=>p.id===existId);
+    if(idx>=0) projects[idx]={...projects[idx],...data};
+  } else {
+    projects.push({id:'p_'+Date.now(),...data});
+  }
+  DB.set('projects',projects);
+  renderAdminProjects();
+  populateMapEditSelect();
+  closeModal('addProjModal');
+  toast(existId?'项目已更新':'项目已添加');
+}
+
+function deleteProject(id){
+  if(!confirm('确认删除该项目？')) return;
+  let projects=DB.get('projects')||[];
+  const proj=projects.find(p=>p.id===id);
+  // Clean up cover from IDB
+  if(proj&&proj.cover&&proj.cover.startsWith('__idb__:')){
+    const ck=proj.cover.substring(8);
+    idbDel(ck).catch(()=>{});
+    if(idbCache[ck]){URL.revokeObjectURL(idbCache[ck]);delete idbCache[ck];}
+  }
+  projects=projects.filter(p=>p.id!==id);
+  DB.set('projects',projects);
+  renderAdminProjects();toast('项目已删除');
+}
+
+// ══════════════════════════════════════
+//  PROJECT COVER PHOTO (IDB storage)
+// ══════════════════════════════════════
+let pendingProjCoverKey=null;  // track key for the pending cover being selected
+
+async function previewProjCover(input){
+  if(!input.files||!input.files[0]) return;
+  const file=input.files[0];
+  try{
+    const blob=await compressImage(file,1200,0.80);
+    pendingProjCoverKey='proj_cover_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+    const ref=await storeImage(blob,pendingProjCoverKey);
+    document.getElementById('fp_cover_data').value=ref;
+    const url=getCachedURL(pendingProjCoverKey);
+    document.getElementById('fp_cover_preview').innerHTML=`<img src="${url}" style="max-height:120px;border-radius:8px;display:block;margin-bottom:4px">`;
+    document.getElementById('fp_cover_clear_btn').style.display='';
+  }catch(e){
+    console.warn('[Cover] compress+store failed, fallback to raw',e);
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      document.getElementById('fp_cover_data').value=ev.target.result;
+      document.getElementById('fp_cover_preview').innerHTML=`<img src="${ev.target.result}" style="max-height:120px;border-radius:8px;display:block;margin-bottom:4px">`;
+      document.getElementById('fp_cover_clear_btn').style.display='';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function clearProjCover(){
+  const oldVal=document.getElementById('fp_cover_data').value;
+  if(oldVal&&oldVal.startsWith('__idb__:')){
+    const key=oldVal.substring(8);
+    idbDel(key).catch(()=>{});
+    if(idbCache[key]){URL.revokeObjectURL(idbCache[key]);delete idbCache[key];}
+  }
+  if(pendingProjCoverKey&&idbCache[pendingProjCoverKey]){
+    URL.revokeObjectURL(idbCache[pendingProjCoverKey]);
+    delete idbCache[pendingProjCoverKey];
+  }
+  pendingProjCoverKey=null;
+  document.getElementById('fp_cover_data').value='';
+  document.getElementById('fp_cover_preview').innerHTML='';
+  document.getElementById('fp_cover_file').value='';
+  document.getElementById('fp_cover_clear_btn').style.display='none';
+}
+
+// ══════════════════════════════════════
+//  NOTES
+// ══════════════════════════════════════
+let currentNoteId=null;
+
+function renderNoteList(){
+  const notes=DB.get('notes')||[];
+  const search=(document.getElementById('noteSearch').value||'').toLowerCase();
+  const filtered=notes.filter(n=>!search||n.title.toLowerCase().includes(search)||(n.content||'').toLowerCase().includes(search));
+  const el=document.getElementById('noteList');
+  if(!filtered.length){el.innerHTML='<div class="empty-tip">暂无笔记</div>';return}
+  el.innerHTML=filtered.map(n=>`
+    <div class="note-item ${n.id===currentNoteId?'active':''}" onclick="openNote('${n.id}')">
+      <div class="note-item-title">${n.title||'无标题'}</div>
+      <div class="note-item-meta"><span>${formatDate(n.updatedAt)}</span></div>
+    </div>`).join('');
+}
+
+function newNote(){
+  const notes=DB.get('notes')||[];
+  const note={id:'n_'+Date.now(),title:'新笔记',content:'',createdAt:Date.now(),updatedAt:Date.now()};
+  notes.unshift(note);DB.set('notes',notes);
+  currentNoteId=note.id;
+  renderNoteList();renderNoteEditor(note);
+}
+
+function openNote(id){
+  const note=(DB.get('notes')||[]).find(n=>n.id===id);
+  if(!note) return;
+  currentNoteId=id;renderNoteList();renderNoteViewer(note);
+}
+
+function renderNoteViewer(note){
+  document.getElementById('noteContent').innerHTML=`
+    <div class="note-editor-header">
+      <h2 style="font-size:17px;font-weight:700;flex:1;color:var(--kq)">${note.title||'无标题'}</h2>
+      <span style="font-size:12px;color:var(--text3)">${formatDate(note.updatedAt)}</span>
+    </div>
+    <div class="note-body"><div class="note-preview">${marked(note.content||'')}</div></div>`;
+}
+
+function renderNoteEditor(note){
+  document.getElementById('noteContent').innerHTML=`
+    <div class="note-editor-header">
+      <input class="note-title-input" id="noteTitleInput" value="${note.title||''}" placeholder="笔记标题">
+      <button class="btn btn-orange btn-sm" onclick="saveNote()">保存</button>
+      <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">取消</button>
+    </div>
+    <div class="note-body" style="display:flex;flex-direction:column">
+      <div style="padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;font-size:12px;color:var(--text3)">支持 Markdown 格式 · # 标题 · **粗体** · *斜体* · \`代码\` · > 引用</div>
+      <textarea class="note-textarea" id="noteBodyInput" placeholder="开始写作…">${note.content||''}</textarea>
+    </div>`;
+}
+
+function switchToEdit(){
+  const note=(DB.get('notes')||[]).find(n=>n.id===currentNoteId);
+  if(note) renderNoteEditor(note);
+}
+
+function cancelEdit(){
+  const note=(DB.get('notes')||[]).find(n=>n.id===currentNoteId);
+  if(note) renderNoteViewer(note);
+}
+
+function saveNote(){
+  const notes=DB.get('notes')||[];
+  const idx=notes.findIndex(n=>n.id===currentNoteId);
+  if(idx<0) return;
+  notes[idx].title=document.getElementById('noteTitleInput').value||'无标题';
+  notes[idx].content=document.getElementById('noteBodyInput').value;
+  notes[idx].updatedAt=Date.now();
+  DB.set('notes',notes);
+  renderNoteList();renderNoteViewer(notes[idx]);toast('笔记已保存');
+}
+
+function deleteNote(id){
+  if(!confirm('确认删除此笔记？')) return;
+  DB.set('notes',(DB.get('notes')||[]).filter(n=>n.id!==id));
+  currentNoteId=null;renderNoteList();
+  document.getElementById('noteContent').innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3)"><div style="font-size:48px;margin-bottom:14px;opacity:.6">📝</div><div style="font-size:14px">选择或新建一篇笔记</div></div>';
+  toast('笔记已删除');
+}
+
+// ══════════════════════════════════════
+//  ADMIN NOTES (后台笔记管理)
+// ══════════════════════════════════════
+let adminNoteId=null;
+
+function renderAdminNoteList(){
+  const notes=DB.get('notes')||[];
+  const search=(document.getElementById('adminNoteSearch').value||'').toLowerCase();
+  const filtered=notes.filter(n=>!search||n.title.toLowerCase().includes(search)||(n.content||'').toLowerCase().includes(search));
+  const el=document.getElementById('adminNoteList');
+  if(!filtered.length){el.innerHTML='<div class="empty-tip" style="padding:24px">暂无笔记</div>';return}
+  el.innerHTML=filtered.map(n=>`
+    <div class="note-item ${n.id===adminNoteId?'active':''}" onclick="openAdminNote('${n.id}')">
+      <div class="note-item-title">${n.title||'无标题'}</div>
+      <div class="note-item-meta"><span>${formatDate(n.updatedAt)}</span></div>
+    </div>`).join('');
+}
+
+function adminNewNote(){
+  const notes=DB.get('notes')||[];
+  const note={id:'n_'+Date.now(),title:'',content:'',createdAt:Date.now(),updatedAt:Date.now()};
+  notes.unshift(note);DB.set('notes',notes);
+  adminNoteId=note.id;
+  renderAdminNoteList();renderAdminNoteEditor(note);
+  setTimeout(()=>{const t=document.getElementById('adminNoteTitleInput');if(t)t.focus()},100);
+}
+
+function openAdminNote(id){
+  const note=(DB.get('notes')||[]).find(n=>n.id===id);
+  if(!note) return;
+  adminNoteId=id;renderAdminNoteList();renderAdminNoteEditor(note);
+}
+
+function renderAdminNoteEditor(note){
+  document.getElementById('adminNoteEditor').innerHTML=`
+    <div class="note-editor-header">
+      <span style="font-size:12px;color:var(--text3)">${formatDate(note.createdAt)} 创建</span>
+      <span style="font-size:12px;color:var(--text3)">${formatDate(note.updatedAt)} 更新</span>
+      <div style="flex:1"></div>
+      <button class="btn btn-danger btn-sm" onclick="adminDeleteNote('${note.id}')">删除</button>
+    </div>
+    <div style="padding:14px 20px 0">
+      <input type="text" class="form-input" id="adminNoteTitleInput" value="${note.title||''}" placeholder="输入笔记标题…" style="font-size:18px;font-weight:700;border:none;border-bottom:2px solid var(--kq-pale);border-radius:0;padding:8px 0;margin-bottom:12px;background:transparent;color:var(--text)">
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;padding:0 20px 14px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--kq-light);border-radius:var(--radius);line-height:1.6">
+        支持 Markdown：<b># 标题</b> · <b>**粗体**</b> · <b>*斜体*</b> · <b>\`代码\`</b> · <b>> 引用</b> · <b>- 列表</b> · <b>\`\`\`代码块\`\`\`</b>　|　换行直接按 Enter，空两行分段
+      </div>
+      <textarea class="note-textarea" id="adminNoteBodyInput" placeholder="开始写作…&#10;&#10;换行直接按 Enter&#10;空一行则分段" style="flex:1;min-height:200px">${note.content||''}</textarea>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-orange" onclick="adminSaveNote()" style="flex:1;justify-content:center">💾 保存笔记</button>
+        <button class="btn btn-secondary" onclick="adminCancelNote()">取消</button>
+      </div>
+    </div>`;
+}
+
+function adminSaveNote(){
+  const notes=DB.get('notes')||[];
+  const idx=notes.findIndex(n=>n.id===adminNoteId);
+  if(idx<0) return;
+  notes[idx].title=document.getElementById('adminNoteTitleInput').value||'无标题';
+  notes[idx].content=document.getElementById('adminNoteBodyInput').value;
+  notes[idx].updatedAt=Date.now();
+  DB.set('notes',notes);
+  renderAdminNoteList();renderNoteList();
+  toast('笔记已保存');
+}
+
+function adminCancelNote(){
+  adminNoteId=null;
+  renderAdminNoteList();
+  document.getElementById('adminNoteEditor').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:14px">选择或新建一篇笔记开始编辑</div>';
+}
+
+function adminDeleteNote(id){
+  if(!confirm('确认删除此笔记？删除后不可恢复。')) return;
+  DB.set('notes',(DB.get('notes')||[]).filter(n=>n.id!==id));
+  adminNoteId=null;renderAdminNoteList();renderNoteList();
+  document.getElementById('adminNoteEditor').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:14px">选择或新建一篇笔记开始编辑</div>';
+  toast('笔记已删除');
+}
+
+function marked(text){
+  if(!text) return '';
+  // First handle code blocks (protect from other processing)
+  const codeBlocks=[];
+  text=text.replace(/```([\s\S]*?)```/g,(_,c)=>{codeBlocks.push(c);return'\x00C'+codeBlocks.length+'\x00'});
+
+  // Split into blocks by double newlines
+  const blocks=text.split(/\n{2,}/);
+  const result=blocks.map(block=>{
+    block=block.trim();
+    if(!block) return '';
+    // Restore code blocks
+    block=block.replace(/\x00C(\d+)\x00/g,(_,n)=>'<pre><code>'+escHtml(codeBlocks[n-1])+'</code></pre>');
+    // Headings
+    if(/^#{1,3}\s/.test(block)) return block.replace(/^###\s+(.+)/,'<h3>$1</h3>').replace(/^##\s+(.+)/,'<h2>$1</h2>').replace(/^#\s+(.+)/,'<h1>$1</h1>');
+    // Blockquote
+    if(/^>\s/.test(block)) return '<blockquote>'+inlineFormat(block.replace(/^>\s?/gm,''))+'</blockquote>';
+    // Unordered list
+    if(/^[-*]\s/.test(block)){
+      const items=block.split('\n').filter(l=>l.trim()).map(l=>'<li>'+inlineFormat(l.replace(/^[-*]\s+/,''))+'</li>').join('');
+      return '<ul>'+items+'</ul>';
+    }
+    // Regular paragraph — preserve single newlines as <br>
+    return '<p>'+inlineFormat(block).replace(/\n/g,'<br>')+'</p>';
+  }).join('\n');
+
+  return result;
+}
+
+function inlineFormat(text){
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g,'<em>$1</em>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ══════════════════════════════════════
+//  LIFE MODULE (Painting / Photography / Cycling)
+// ══════════════════════════════════════
+let currentLifeTab='painting';
+let adminLifeCategory='painting';
+let pendingLifePhotos=[];
+let lifeLightboxIndex=0;
+let lifeLightboxPhotos=[];
+
+const lifeCategoryLabels={painting:'绘画',photography:'摄影',cycling:'骑行'};
+const lifeCategoryTitles={
+  painting:{title:'画 · 廊',subtitle:'用色彩记录所见与所想'},
+  photography:{title:'光 · 影',subtitle:'定格每一个值得珍藏的瞬间'},
+  cycling:{title:'骑 · 行',subtitle:'用车轮丈量每一寸风景'}
+};
+
+function renderLifePage(){
+  switchLifeTab(currentLifeTab,document.querySelector('.life-tab.active'));
+}
+
+function switchLifeTab(cat,el){
+  currentLifeTab=cat;
+  document.querySelectorAll('.life-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  else{const tab=[...document.querySelectorAll('.life-tab')].find(t=>t.textContent.includes(lifeCategoryLabels[cat]));if(tab)tab.classList.add('active')}
+  renderLifeContent();
+}
+
+// Helper: build img src+data-idb-key attrs from a data ref
+function imgAttrs(data,extraAttrs){
+  if(!data) return 'src="" '+extraAttrs;
+  if(data.startsWith('__idb__:')){
+    const key=data.substring(8);
+    const cached=idbCache[key];
+    if(cached) return 'src="'+cached+'" '+extraAttrs;
+    return 'src="" data-idb-key="'+key+'" '+extraAttrs;
+  }
+  return 'src="'+data+'" '+extraAttrs;
+}
+
+async function renderLifeContent(){
+  const photos=DB.get('life_'+currentLifeTab)||[];
+  const content=document.getElementById('lifeContent');
+  const info=lifeCategoryTitles[currentLifeTab];
+
+  // Wait for IDB, then preload all photos into cache BEFORE rendering
+  if(!idbReady){
+    await new Promise(r=>setTimeout(r,300));
+  }
+  await preloadLifeRefs(photos).catch(()=>{});
+
+  // Debug: log data format of first photo
+  if(photos.length) console.log('[Life] first photo data:', photos[0].data ? photos[0].data.substring(0,60) : '(empty)', '| idbReady:', idbReady, '| keys in cache:', Object.keys(idbCache).length);
+
+  if(currentLifeTab==='cycling'){
+    // Cycling: list view
+    if(!photos.length){
+      content.innerHTML=`<div class="cycling-empty"><div style="font-size:56px;opacity:.3;margin-bottom:14px">🚴</div><div style="font-size:14px">还没有骑行记录</div></div>`;
+      return;
+    }
+    const sorted=[...photos].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    content.innerHTML=`<div class="cycling-list">${sorted.map(p=>`
+      <div class="cycling-card" onclick="openLifeLightbox('${currentLifeTab}','${p.id}')">
+        <img class="cycling-card-img" ${imgAttrs(p.data,'alt="'+escHtml(p.desc||'')+'" loading="lazy"')}>
+        <div class="cycling-card-body">
+          <div class="cycling-card-title">${escHtml(p.title)||lifeCategoryLabels.cycling+'记录'}</div>
+          <div class="cycling-card-desc">${escHtml(p.desc)||'点击查看详情'}</div>
+          <div class="cycling-card-date">${formatDate(p.createdAt)}</div>
+        </div>
+      </div>`).join('')}</div>`;
+  } else {
+    // Painting & Photography: gallery (art museum) view
+    if(!photos.length){
+      content.innerHTML=`<div class="gallery-hall"><div class="gallery-wall">
+        <div class="gallery-empty"><div class="gallery-empty-icon">${currentLifeTab==='painting'?'🎨':'📷'}</div>
+        <div style="font-size:14px">这里还空空如也，等待作品上墙</div></div>
+      </div></div>`;
+      return;
+    }
+    content.innerHTML=`<div class="gallery-hall"><div class="gallery-wall">
+      <div class="gallery-title">${info.title}</div>
+      <div class="gallery-subtitle">${info.subtitle}</div>
+      <div class="gallery-grid">${photos.map((p,i)=>`
+        <div class="gallery-frame" onclick="openLifeLightbox('${currentLifeTab}','${p.id}')">
+          <img class="gallery-img" ${imgAttrs(p.data,'alt="'+escHtml(p.desc||'')+'" loading="lazy"')}>
+          <div class="gallery-caption">${escHtml(p.desc)||escHtml(p.title)||'无题'}</div>
+        </div>`).join('')}</div>
+    </div></div>`;
+  }
+  // Post-render: fix any images that couldn't be resolved yet
+  fixImageSrcs(content);
+}
+
+// ── Lightbox ──
+function openLifeLightbox(cat,photoId){
+  lifeLightboxPhotos=DB.get('life_'+cat)||[];
+  lifeLightboxIndex=lifeLightboxPhotos.findIndex(p=>p.id===photoId);
+  if(lifeLightboxIndex<0) return;
+  showLifeLightbox();
+}
+
+function showLifeLightbox(){
+  const p=lifeLightboxPhotos[lifeLightboxIndex];
+  if(!p) return;
+  const hasPrev=lifeLightboxIndex>0;
+  const hasNext=lifeLightboxIndex<lifeLightboxPhotos.length-1;
+  let lb=document.getElementById('lifeLightbox');
+  if(!lb){
+    lb=document.createElement('div');
+    lb.id='lifeLightbox';
+    lb.className='lightbox';
+    lb.innerHTML=`
+      <div class="lightbox-content">
+        <button class="lightbox-close" onclick="closeLifeLightbox()">✕</button>
+        <button class="lightbox-nav prev" onclick="lifeLightboxNav(-1)" style="display:none">‹</button>
+        <img class="lightbox-img" id="lifeLightboxImg">
+        <div class="lightbox-caption" id="lifeLightboxCaption"></div>
+        <button class="lightbox-nav next" onclick="lifeLightboxNav(1)" style="display:none">›</button>
+      </div>`;
+    lb.addEventListener('click',e=>{if(e.target===lb) closeLifeLightbox()});
+    document.body.appendChild(lb);
+  }
+  const imgEl=document.getElementById('lifeLightboxImg');
+  const url=resolveDataURL(p.data);
+  if(url){imgEl.src=url}
+  else if(p.data&&p.data.startsWith('__idb__:')){
+    // Load from IDB async
+    const key=p.data.substring(8);
+    imgEl.src='';
+    (async()=>{
+      let blob;
+      // Try cache first, then IDB
+      if(idbCache[key]){imgEl.src=idbCache[key];return}
+      if(idbReady&&idbDB) blob=await idbGet(key).catch(()=>null);
+      if(blob){cacheURL(key,blob);imgEl.src=idbCache[key]}
+    })();
+  }
+  document.getElementById('lifeLightboxCaption').textContent=p.desc||p.title||'';
+  lb.querySelector('.lightbox-nav.prev').style.display=hasPrev?'flex':'none';
+  lb.querySelector('.lightbox-nav.next').style.display=hasNext?'flex':'none';
+  lb.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function lifeLightboxNav(dir){
+  const ni=lifeLightboxIndex+dir;
+  if(ni<0||ni>=lifeLightboxPhotos.length) return;
+  lifeLightboxIndex=ni;
+  showLifeLightbox();
+}
+
+function closeLifeLightbox(){
+  const lb=document.getElementById('lifeLightbox');
+  if(lb) lb.classList.remove('open');
+  document.body.style.overflow='';
+}
+
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('lifeLightbox')||!document.getElementById('lifeLightbox').classList.contains('open')) return;
+  if(e.key==='Escape') closeLifeLightbox();
+  if(e.key==='ArrowLeft') lifeLightboxNav(-1);
+  if(e.key==='ArrowRight') lifeLightboxNav(1);
+});
+
+// ── Admin: Life Photo Management ──
+function selectLifeCategory(cat,el){
+  adminLifeCategory=cat;
+  document.querySelectorAll('.life-upload-cat-btn').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  loadLifePhotosAdmin();
+}
+
+async function loadLifePhotosAdmin(){
+  const photos=DB.get('life_'+adminLifeCategory)||[];
+  pendingLifePhotos=photos.map(p=>({...p,existing:true}));
+  // Wait for IDB to be ready, then preload all image refs before rendering
+  if(!idbReady){
+    await new Promise(r=>setTimeout(r,300));
+  }
+  await preloadLifeRefs(pendingLifePhotos).catch(()=>{});
+  renderLifePhotoGrid();
+}
+
+function handleLifeFileSelect(e){
+  processLifeFiles(Array.from(e.target.files));
+  e.target.value='';
+}
+
+function handleLifeDrop(e){
+  e.preventDefault();
+  e.currentTarget.classList.remove('dragover');
+  processLifeFiles(Array.from(e.dataTransfer.files));
+}
+
+async function processLifeFiles(files){
+  for(const file of files){
+    if(!file.type.startsWith('image/')){toast('仅支持图片文件：'+file.name,'warn');continue}
+    try{
+      const blob=await compressImage(file,1600,0.75);
+      const id='lp_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);
+      const key='life_'+adminLifeCategory+'_'+id;
+      const ref=await storeImage(blob,key);
+      pendingLifePhotos.push({
+        id,name:file.name,data:ref,desc:'',title:'',
+        createdAt:Date.now(),existing:false
+      });
+      renderLifePhotoGrid();
+    }catch(err){
+      toast('图片处理失败：'+file.name,'err');
+    }
+  }
+}
+
+function renderLifePhotoGrid(){
+  const grid=document.getElementById('lifePhotoGrid');
+  if(!pendingLifePhotos.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text3);font-size:13px">暂无照片，请上传图片</div>';
+    return;
+  }
+  grid.innerHTML=pendingLifePhotos.map((p,i)=>`
+    <div class="life-photo-item">
+      <img ${imgAttrs(p.data,'alt="" onclick="previewLifePhoto(\''+p.id+'\')"')}>
+      <button class="life-photo-edit" onclick="editLifePhotoDesc(${i})" title="编辑描述">✎</button>
+      <button class="life-photo-del" onclick="removeLifePhoto(${i})" title="删除">×</button>
+      <input type="text" class="life-desc-input" placeholder="添加描述…" value="${escAttr(p.desc)||''}" onchange="updateLifePhotoDesc(${i},this.value)">
+    </div>`).join('');
+  fixImageSrcs(grid);
+}
+
+function updateLifePhotoDesc(idx,val){
+  if(pendingLifePhotos[idx]) pendingLifePhotos[idx].desc=val;
+}
+
+function editLifePhotoDesc(idx){
+  const input=document.querySelectorAll('.life-desc-input')[idx];
+  if(input) input.focus();
+}
+
+function removeLifePhoto(idx){
+  pendingLifePhotos.splice(idx,1);
+  renderLifePhotoGrid();
+}
+
+function previewLifePhoto(id){
+  const p=pendingLifePhotos.find(x=>x.id===id);
+  if(!p) return;
+  lifeLightboxPhotos=[p];
+  lifeLightboxIndex=0;
+  showLifeLightbox();
+}
+
+function saveLifePhotos(){
+  if(!pendingLifePhotos.length){toast('没有照片可保存','warn');return}
+  try{
+    // Store metadata in localStorage; image blobs are already in IDB
+    DB.set('life_'+adminLifeCategory,pendingLifePhotos.map(p=>({id:p.id,name:p.name,data:p.data,desc:p.desc||'',title:p.title||'',createdAt:p.createdAt||Date.now()})));
+    toast('照片已保存（'+pendingLifePhotos.length+'张）');
+    if(currentPage==='life'&&currentLifeTab===adminLifeCategory) renderLifeContent();
+  }catch(e){
+    if(e.name==='QuotaExceededError'||e.toString().indexOf('quota')>-1){
+      toast('存储空间不足！请减少照片数量','err');
+    }else{
+      toast('保存失败：'+e.message,'err');
+    }
+  }
+}
+
+function escHtml(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escAttr(s){return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+function formatDate(ts){
+  if(!ts) return '';
+  const d=new Date(ts);
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ══════════════════════════════════════
+//  MODALS & TOAST
+// ══════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.addEventListener('click',e=>{if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open')});
+
+let toastTimer;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast '+(type!=='ok'?type:'');
+  el.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+loadData();
+renderProfile();
+
+// Async init: open IDB, migrate old data, then re-render
+(async function(){
+  try{
+    await initIDB();
+    // Load seed IDB images into IndexedDB
+    const seedIDB=window.__seedIDB;
+    if(seedIDB&&Object.keys(seedIDB).length){
+      console.log('[Seed] Loading seed IDB images...');
+      const idbPromises=[];
+      for(const [key,b64] of Object.entries(seedIDB)){
+        const binary=atob(b64);
+        const bytes=new Uint8Array(binary.length);
+        for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+        const blob=new Blob([bytes],{type:'image/jpeg'});
+        idbPromises.push(idbPut(key,blob).then(()=>cacheURL(key,blob)));
+      }
+      await Promise.allSettled(idbPromises);
+      console.log('[Seed] IDB images loaded:', Object.keys(seedIDB).length);
+      window.__seedIDB=null;
+    }
+    await migrateToIDB();
+    // Re-render profile to show migrated avatar
+    renderProfile();
+    // Re-render life page if visible
+    if(currentPage==='life') renderLifeContent();
+    console.log('[IDB] Migration complete');
+  }catch(e){
+    console.warn('[IDB] Migration failed:',e);
+  }
+})();
+
+window.addEventListener('resize',()=>{if(mainMap) mainMap.invalidateSize()});
+</script>
+</body>
+</html>
