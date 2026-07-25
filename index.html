@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>个人主页 | 结构工程师</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
@@ -2865,6 +2868,15 @@ renderProfile();
 })();
 
 window.addEventListener('resize',()=>{if(mainMap) mainMap.invalidateSize()});
+
+// Force reload when page is restored from bfcache (back-forward cache)
+// This ensures visitors always see the SEED_DATA version, not stale localStorage
+window.addEventListener('pageshow',function(e){
+  if(e.persisted){
+    console.log('[BFCache] Page restored from bfcache, forcing reload...');
+    location.reload();
+  }
+});
 </script>
 </body>
 </html>
