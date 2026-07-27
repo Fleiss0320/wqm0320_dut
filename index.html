@@ -1627,7 +1627,7 @@ async function publishToGitHub(){
       let errText='';
       try{errText=await putResp.text();}catch{}
       console.error('[Publish] PUT index.html failed:',putResp.status,errText);
-      throw new Error(err.message||errText||'HTTP '+putResp.status);
+      throw new Error(errText||'HTTP '+putResp.status);
     }
     doneFiles++;
     console.log('[Publish] index.html uploaded');
