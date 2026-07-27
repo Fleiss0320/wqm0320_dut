@@ -1624,8 +1624,10 @@ async function publishToGitHub(){
     });
 
     if(!putResp.ok){
-      const err=await putResp.json();
-      throw new Error(err.message||'HTTP '+putResp.status);
+      let errText='';
+      try{errText=await putResp.text();}catch{}
+      console.error('[Publish] PUT index.html failed:',putResp.status,errText);
+      throw new Error(err.message||errText||'HTTP '+putResp.status);
     }
     doneFiles++;
     console.log('[Publish] index.html uploaded');
