@@ -1362,8 +1362,13 @@ async function exportForGitHub(){
   const idbKeys=new Set();
   function scanIDB(obj){
     if(!obj) return;
-    if(typeof obj==='string'&&obj.startsWith('__idb__:')){
-      idbKeys.add(obj.substring(8));
+    if(typeof obj==='string'){
+      if(obj.startsWith('__idb__:')){
+        idbKeys.add(obj.substring(8));
+      }
+      // Also scan embedded refs (e.g., in note content markdown)
+      const matches=obj.match(/__idb__:([^\s)\]]+)/g);
+      if(matches){matches.forEach(m=>idbKeys.add(m.substring(8)));}
     }else if(Array.isArray(obj)){
       obj.forEach(scanIDB);
     }else if(typeof obj==='object'){
@@ -1403,6 +1408,10 @@ async function exportForGitHub(){
     if(!obj) return obj;
     if(typeof obj==='string'){
       if(obj.startsWith('__idb__:')&&idbMap[obj]) return idbMap[obj];
+      // Also replace embedded __idb__: refs (e.g., in note content markdown)
+      if(obj.includes('__idb__:')){
+        return obj.replace(/__idb__:([^\s)\]]+)/g,function(m,k){return idbMap['__idb__:'+k]||m;});
+      }
       return obj;
     }
     if(Array.isArray(obj)) return obj.map(deepRewrite);
@@ -1507,8 +1516,13 @@ async function publishToGitHub(){
   const idbKeys=new Set();
   function scanIDB(obj){
     if(!obj) return;
-    if(typeof obj==='string'&&obj.startsWith('__idb__:')){
-      idbKeys.add(obj.substring(8));
+    if(typeof obj==='string'){
+      if(obj.startsWith('__idb__:')){
+        idbKeys.add(obj.substring(8));
+      }
+      // Also scan embedded refs (e.g., in note content markdown)
+      const matches=obj.match(/__idb__:([^\s)\]]+)/g);
+      if(matches){matches.forEach(m=>idbKeys.add(m.substring(8)));}
     }else if(Array.isArray(obj)){
       obj.forEach(scanIDB);
     }else if(typeof obj==='object'){
@@ -1540,6 +1554,10 @@ async function publishToGitHub(){
     if(!obj) return obj;
     if(typeof obj==='string'){
       if(obj.startsWith('__idb__:')&&idbMap[obj]) return idbMap[obj];
+      // Also replace embedded __idb__: refs (e.g., in note content markdown)
+      if(obj.includes('__idb__:')){
+        return obj.replace(/__idb__:([^\s)\]]+)/g,function(m,k){return idbMap['__idb__:'+k]||m;});
+      }
       return obj;
     }
     if(Array.isArray(obj)) return obj.map(deepRewrite);
@@ -2553,7 +2571,7 @@ function renderNoteViewer(note){
       <h2 style="font-size:17px;font-weight:700;flex:1;color:var(--kq)">${note.title||'无标题'}</h2>
       <span style="font-size:12px;color:var(--text3)">${formatDate(note.updatedAt)}</span>
     </div>
-    <div class="note-body"><div class="note-preview">${marked(note.content||'')}</div></div>`;
+    <div class="note-body"><div class="note-preview">${marked(processNoteContent(note.content||''))}</div></div>`;
 }
 
 function renderNoteEditor(note){
@@ -2644,7 +2662,7 @@ function renderAdminNoteEditor(note){
     </div>
     <div style="flex:1;display:flex;flex-direction:column;padding:0 20px 14px">
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--kq-light);border-radius:var(--radius);line-height:1.6">
-        支持 Markdown：<b># 标题</b> · <b>**粗体**</b> · <b>*斜体*</b> · <b>\`代码\`</b> · <b>> 引用</b> · <b>- 列表</b> · <b>\`\`\`代码块\`\`\`</b>　|　换行直接按 Enter，空两行分段
+        支持 Markdown：<b># 标题</b> · <b>**粗体**</b> · <b>*斜体*</b> · <b>\`代码\`</b> · <b>> 引用</b> · <b>- 列表</b>　|　<button class="btn btn-sm" onclick="insertImageToAdminNote()" style="padding:2px 8px;font-size:11px;vertical-align:middle">📷 插入图片</button>
       </div>
       <textarea class="note-textarea" id="adminNoteBodyInput" placeholder="开始写作…&#10;&#10;换行直接按 Enter&#10;空一行则分段" style="flex:1;min-height:200px">${note.content||''}</textarea>
       <div style="margin-top:12px;display:flex;gap:8px">
@@ -2678,6 +2696,49 @@ function adminDeleteNote(id){
   adminNoteId=null;renderAdminNoteList();renderNoteList();
   document.getElementById('adminNoteEditor').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:14px">选择或新建一篇笔记开始编辑</div>';
   toast('笔记已删除');
+}
+
+async function insertImageToAdminNote(){
+  const input=document.createElement('input');
+  input.type='file';
+  input.accept='image/*';
+  input.onchange=async function(){
+    const file=input.files[0];
+    if(!file) return;
+    toast('正在处理图片…','ok');
+    try{
+      const compressed=await compressImage(file,1200,0.75);
+      const key='note_img_'+Date.now();
+      await idbPut(key,compressed);
+      cacheURL(key,compressed);
+      const alt=prompt('图片描述（可选）','图片');
+      const altText=(alt||'').trim()||'图片';
+      const markdown='\n!['+altText+'](__idb__:'+key+')\n';
+      const textarea=document.getElementById('adminNoteBodyInput');
+      if(textarea){
+        const start=textarea.selectionStart;
+        const end=textarea.selectionEnd;
+        const text=textarea.value;
+        textarea.value=text.substring(0,start)+markdown+text.substring(end);
+        textarea.selectionStart=textarea.selectionEnd=start+markdown.length;
+        textarea.focus();
+      }
+      toast('图片已插入到光标位置');
+    }catch(e){
+      console.error('Insert image failed:',e);
+      toast('图片处理失败','error');
+    }
+  };
+  input.click();
+}
+
+function processNoteContent(content){
+  if(!content) return '';
+  // Replace __idb__: refs in image markdown with real image URLs
+  return content.replace(/!\[([^\]]*)\]\(__idb__:([^)]+)\)/g, function(match,alt,key){
+    const url=resolveDataURL('__idb__:'+key);
+    return '!['+alt+']('+(url||'')+')';
+  });
 }
 
 function marked(text){
