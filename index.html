@@ -646,7 +646,12 @@
       <button class="admin-nav-item" onclick="showAdminSection('adminLife',this)">生活照片管理</button>
       <button class="admin-nav-item" onclick="showAdminSection('adminNotes',this)">笔记管理</button>
       <div style="flex:1"></div>
-      <button class="btn btn-orange" style="width:100%;justify-content:center;margin-top:12px;font-size:12px" onclick="exportForGitHub()">📦 导出网页文件</button>
+      <div style="padding:0 0 8px;border-top:1px solid var(--border);margin-top:8px">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">GitHub Token (一行发布)</label>
+        <input type="password" class="form-input" id="githubToken" placeholder="ghp_..." style="padding:6px 8px;font-size:11px;width:100%;margin-bottom:6px" onchange="saveGithubToken()">
+      </div>
+      <button class="btn btn-orange" style="width:100%;justify-content:center;font-size:12px" onclick="publishToGitHub()">🚀 发布到 GitHub</button>
+      <button class="btn btn-orange" style="width:100%;justify-content:center;margin-top:6px;font-size:12px" onclick="exportForGitHub()">📦 导出网页文件</button>
       <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:6px" onclick="toggleAdmin()">← 返回前台</button>
     </div>
     <div class="admin-panel">
@@ -1444,6 +1449,214 @@ async function exportForGitHub(){
     : '导出成功！上传 index.html 到 GitHub/Gitee 即可更新网站';
   toast(msg,'ok');
   console.log('[Export] SEED_DATA size:',(seedJson.length/1024).toFixed(1)+'KB','New images:',newImageCount);
+}
+
+// Helper: string to base64 (UTF-8 safe)
+function strToBase64(str){
+  const bytes=new TextEncoder().encode(str);
+  let binary='';
+  for(let i=0;i<bytes.length;i++) binary+=String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+// Helper: blob to base64
+async function blobToBase64(blob){
+  const buf=await blob.arrayBuffer();
+  const bytes=new Uint8Array(buf);
+  let binary='';
+  for(let i=0;i<bytes.length;i++) binary+=String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function saveGithubToken(){
+  const token=document.getElementById('githubToken').value.trim();
+  if(token) localStorage.setItem('gh_publish_token',token);
+}
+
+function loadGithubToken(){
+  const saved=localStorage.getItem('gh_publish_token');
+  if(saved){
+    const el=document.getElementById('githubToken');
+    if(el) el.value=saved;
+  }
+}
+
+async function publishToGitHub(){
+  const token=document.getElementById('githubToken').value.trim();
+  if(!token){toast('请先粘贴 GitHub Token','warn');return}
+  localStorage.setItem('gh_publish_token',token);
+
+  const repo='Fleiss0320/wqm0320_dut';
+  const branch='main';
+  const apiBase='https://api.github.com/repos/'+repo+'/contents';
+  const timeout=120000;
+
+  toast('正在准备发布…','ok');
+
+  // Step 1: Collect localStorage data
+  const seed={ls:{},_ver:Date.now()};
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key&&key.startsWith('pb_')&&key!=='pb__seed_ver'){
+      const shortKey=key.substring(3);
+      try{seed.ls[shortKey]=JSON.parse(localStorage.getItem(key))}catch{seed.ls[shortKey]=localStorage.getItem(key)}
+    }
+  }
+
+  // Step 2: Find __idb__ references
+  const idbKeys=new Set();
+  function scanIDB(obj){
+    if(!obj) return;
+    if(typeof obj==='string'&&obj.startsWith('__idb__:')){
+      idbKeys.add(obj.substring(8));
+    }else if(Array.isArray(obj)){
+      obj.forEach(scanIDB);
+    }else if(typeof obj==='object'){
+      Object.values(obj).forEach(scanIDB);
+    }
+  }
+  for(const v of Object.values(seed.ls)) scanIDB(v);
+
+  // Step 3: Build IDB image map (key -> base64 content)
+  const idbImages={};
+  if(idbKeys.size>0&&idbReady&&idbDB){
+    for(const key of idbKeys){
+      try{
+        const blob=await idbGet(key);
+        if(blob){
+          idbImages[key]=await blobToBase64(blob);
+        }
+      }catch(e){console.warn('[Publish] IDB key not found:',key,e)}
+    }
+  }
+
+  // Step 4: Build path map for SEED_DATA rewrite
+  const idbMap={};
+  for(const key of Object.keys(idbImages)){
+    idbMap['__idb__:'+key]='images/'+key+'.jpg';
+  }
+
+  function deepRewrite(obj){
+    if(!obj) return obj;
+    if(typeof obj==='string'){
+      if(obj.startsWith('__idb__:')&&idbMap[obj]) return idbMap[obj];
+      return obj;
+    }
+    if(Array.isArray(obj)) return obj.map(deepRewrite);
+    if(typeof obj==='object'){
+      const result={};
+      for(const [k,v] of Object.entries(obj)) result[k]=deepRewrite(v);
+      return result;
+    }
+    return obj;
+  }
+  const finalSeed={ls:deepRewrite(seed.ls),_ver:seed._ver};
+  const seedJson=JSON.stringify(finalSeed);
+
+  // Step 5: Get HTML and replace SEED_DATA
+  let html;
+  try{
+    const resp=await fetch(window.location.href);
+    html=await resp.text();
+  }catch(e){
+    html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  }
+
+  const seedLineRegex=/(const SEED_DATA=)(\{[\s\S]*?\})(;\s*\/\/ @SEED@)/;
+  if(!seedLineRegex.test(html)){
+    toast('错误：找不到 SEED_DATA 锚点','error');
+    return;
+  }
+  html=html.replace(seedLineRegex,'$1'+seedJson+'$3');
+
+  // Step 6: Upload to GitHub
+  toast('正在发布到 GitHub…','ok');
+
+  const headers={
+    'Authorization':'token '+token,
+    'Accept':'application/vnd.github.v3+json'
+  };
+
+  const totalFiles=1+Object.keys(idbImages).length;
+  let doneFiles=0;
+  const commitMsg='Update from admin panel — '+new Date().toLocaleString('zh-CN');
+
+  // Upload index.html
+  try{
+    let sha=null;
+    try{
+      const getResp=await fetch(apiBase+'/index.html?ref='+branch,{headers});
+      if(getResp.ok){
+        const getData=await getResp.json();
+        sha=getData.sha;
+      }
+    }catch(e){/* file doesn't exist yet */}
+
+    const body={
+      message:commitMsg,
+      content:strToBase64(html),
+      branch:branch
+    };
+    if(sha) body.sha=sha;
+
+    const putResp=await fetch(apiBase+'/index.html',{
+      method:'PUT',
+      headers:{...headers,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+
+    if(!putResp.ok){
+      const err=await putResp.json();
+      throw new Error(err.message||'HTTP '+putResp.status);
+    }
+    doneFiles++;
+    console.log('[Publish] index.html uploaded');
+  }catch(e){
+    toast('上传 index.html 失败: '+e.message,'error');
+    return;
+  }
+
+  // Upload new images
+  for(const [key,base64Content] of Object.entries(idbImages)){
+    try{
+      const imgPath='images/'+key+'.jpg';
+
+      let sha=null;
+      try{
+        const getResp=await fetch(apiBase+'/'+imgPath+'?ref='+branch,{headers});
+        if(getResp.ok){
+          const getData=await getResp.json();
+          sha=getData.sha;
+        }
+      }catch(e){}
+
+      const body={
+        message:commitMsg,
+        content:base64Content,
+        branch:branch
+      };
+      if(sha) body.sha=sha;
+
+      const putResp=await fetch(apiBase+'/'+imgPath,{
+        method:'PUT',
+        headers:{...headers,'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      });
+
+      if(!putResp.ok){
+        const err=await putResp.json();
+        throw new Error(err.message||'HTTP '+putResp.status);
+      }
+      doneFiles++;
+      toast('已上传: '+imgPath+' ('+doneFiles+'/'+totalFiles+')','ok');
+    }catch(e){
+      console.warn('[Publish] Failed to upload image:',key,e);
+    }
+  }
+
+  const imageInfo=Object.keys(idbImages).length>0?' + '+Object.keys(idbImages).length+' 张图片':'';
+  toast('✅ 发布成功！已上传 index.html'+imageInfo+'，稍等片刻网站即更新','ok');
+  console.log('[Publish] Done:',doneFiles+'/'+totalFiles+' files uploaded');
 }
 
 // Legacy exportSeed kept for backward compat
@@ -2802,6 +3015,7 @@ function toast(msg,type='ok'){
 //  INIT
 // ══════════════════════════════════════
 loadData();
+loadGithubToken();
 renderProfile();
 
 // Async init: open IDB, migrate old data, then re-render
