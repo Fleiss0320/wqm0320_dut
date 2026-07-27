@@ -565,16 +565,6 @@
   <div class="view-toggle">
     <button class="toggle-btn active" id="mapToggleBtn" onclick="setProjView('map')">🗺 地图视图</button>
     <button class="toggle-btn" id="listToggleBtn" onclick="setProjView('list')">☰ 列表视图</button>
-    <div style="flex:1"></div>
-    <input type="text" class="form-input" style="width:210px;padding:7px 12px" placeholder="搜索项目名称…" id="projSearch" oninput="renderProjectList()">
-    <select class="form-select" style="width:136px" id="projTypeFilter" onchange="renderProjectList()">
-      <option value="">全部结构</option>
-      <option value="concrete">混凝土</option>
-      <option value="masonry">砌体</option>
-      <option value="steel">钢结构</option>
-      <option value="timber">木结构</option>
-      <option value="other">其他</option>
-    </select>
   </div>
 
   <div id="proj-list-view" style="display:none">
@@ -603,9 +593,8 @@
         <div class="map-search-results" id="mapSearchResults"></div>
       </div>
       <div class="map-layer-switch">
-        <button class="layer-switch-btn active" onclick="switchBaseLayer('satellite')" id="layerBtnSatellite">🛰 卫星</button>
+        <button class="layer-switch-btn active" onclick="switchBaseLayer('street')" id="layerBtnStreet">🗺 街道</button>
         <button class="layer-switch-btn" onclick="switchBaseLayer('terrain')" id="layerBtnTerrain">⛰ 地形</button>
-        <button class="layer-switch-btn" onclick="switchBaseLayer('street')" id="layerBtnStreet">🗺 街道</button>
       </div>
       <div class="map-polygon-toggle" id="polygonToggle" onclick="togglePolygons()" title="显示/隐藏项目图斑">
         <span class="polygon-toggle-icon" id="polygonToggleIcon">✅</span>
@@ -719,9 +708,8 @@
             <div class="map-search-results" id="adminMapSearchResults"></div>
           </div>
           <div class="map-layer-switch" style="top:48px">
-            <button class="layer-switch-btn active" onclick="adminSwitchBaseLayer('satellite')" id="adminLayerBtnSatellite">🛰 卫星</button>
+            <button class="layer-switch-btn active" onclick="adminSwitchBaseLayer('street')" id="adminLayerBtnStreet">🗺 街道</button>
             <button class="layer-switch-btn" onclick="adminSwitchBaseLayer('terrain')" id="adminLayerBtnTerrain">⛰ 地形</button>
-            <button class="layer-switch-btn" onclick="adminSwitchBaseLayer('street')" id="adminLayerBtnStreet">🗺 街道</button>
           </div>
         </div>
         <p style="font-size:12px;color:var(--text3);margin-top:8px">点击地图设定标记 · 点击绘制按钮开始绘制图斑 · 双击完成绘制</p>
@@ -1691,18 +1679,11 @@ function setProjView(view){
 
 function renderProjectList(){
   const projects=DB.get('projects')||[];
-  const search=(document.getElementById('projSearch').value||'').toLowerCase();
-  const typeF=document.getElementById('projTypeFilter').value;
   const tbody=document.getElementById('projTableBody');
   const empty=document.getElementById('projEmpty');
-  let filtered=projects.filter(p=>{
-    if(search&&!p.name.toLowerCase().includes(search)) return false;
-    if(typeF&&!(p.struct_type||'').toLowerCase().includes(typeF)) return false;
-    return true;
-  });
-  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return}
+  if(!projects.length){tbody.innerHTML='';empty.style.display='block';return}
   empty.style.display='none';
-  tbody.innerHTML=filtered.map((p,i)=>{
+  tbody.innerHTML=projects.map((p,i)=>{
     return `<tr onclick="openProjectDetail('${p.id}')">
       <td style="color:var(--text3);font-weight:600">${i+1}</td>
       <td><strong style="color:var(--kq)">${p.name}</strong>${p.lat?` <span style="font-size:11px;color:var(--pb)">📍</span>`:''}</td>
@@ -1742,7 +1723,7 @@ let mainMap=null;
 let mapMarkers=[];
 let mapPolygons=[];
 let mapCenterMarkers=[];
-let currentBaseLayer='satellite';
+let currentBaseLayer='street';
 let baseLayers={};
 let polygonsVisible=true;
 
@@ -1760,23 +1741,13 @@ function initMainMap(){
     minZoom:9
   }).setView(SH_CENTER,11);
 
-  // Satellite (Esri World Imagery) - default
-  baseLayers.satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-    attribution:'Esri, Maxar',maxZoom:19
-  }).addTo(mainMap);
-
-  // Chinese labels overlay for satellite (Gaode/Amap annotation tiles)
-  L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=8',{
-    attribution:'高德',maxZoom:18,opacity:.55
+  // Street (Gaode standard map, Chinese labels) - default
+  baseLayers.street=L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8',{
+    attribution:'高德',maxZoom:18
   }).addTo(mainMap);
 
   // Terrain with Chinese labels (Gaode terrain + labels)
   baseLayers.terrain=L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=6',{
-    attribution:'高德',maxZoom:18
-  });
-
-  // Street (Gaode standard map, Chinese labels)
-  baseLayers.street=L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8',{
     attribution:'高德',maxZoom:18
   });
 
@@ -1789,7 +1760,7 @@ function switchBaseLayer(type){
   // Remove all known base layers
   Object.values(baseLayers).forEach(l=>{if(mainMap.hasLayer(l)) mainMap.removeLayer(l)});
   // Add new base layer
-  if(baseLayers[type]){ baseLayers[type].addTo(mainMap); mainMap.setZIndex(0) }
+  if(baseLayers[type]){ baseLayers[type].addTo(mainMap); baseLayers[type].setZIndex(0) }
   currentBaseLayer=type;
   // Update button states
   document.querySelectorAll('.layer-switch-btn').forEach(b=>b.classList.remove('active'));
@@ -1930,7 +1901,7 @@ document.addEventListener('click',function(e){
 let adminMap=null,adminMapMarker=null,tempLatLng=null;
 let adminDrawControl=null,adminDrawnItems=null;
 let adminBaseLayers={};
-let adminCurrentLayer='satellite';
+let adminCurrentLayer='street';
 let adminSearchMarker=null;
 let isDrawingPolygon=false;
 
@@ -1961,11 +1932,8 @@ function initAdminMap(){
     minZoom:9
   }).setView(SH_CENTER,11);
 
-  adminBaseLayers.satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'}).addTo(adminMap);
-  L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=8',{maxZoom:18,opacity:.55,attribution:'高德'}).addTo(adminMap);
-
+  adminBaseLayers.street=L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8',{maxZoom:18,attribution:'高德'}).addTo(adminMap);
   adminBaseLayers.terrain=L.tileLayer('https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=6',{maxZoom:18,attribution:'高德'});
-  adminBaseLayers.street=L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8',{maxZoom:18,attribution:'高德'});
 
   adminDrawnItems=new L.FeatureGroup();
   adminMap.addLayer(adminDrawnItems);
