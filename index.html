@@ -1932,7 +1932,7 @@ function openProjectDetail(projId){
   const p=projects.find(x=>x.id===projId);
   if(!p) return;
   document.getElementById('projModalTitle').textContent=p.name;
-  const coverHtml=p.cover?`<img ${imgAttrs(p.cover)} style="width:100%;max-height:220px;object-fit:cover;border-radius:var(--radius-lg);margin-bottom:16px;display:block">`:'';
+ const coverHtml=p.cover?`<img ${imgAttrs(p.cover)} style="width:100%;height:auto;max-height:520px;object-fit:contain;background:var(--bg-2);border-radius:var(--radius-lg);margin-bottom:16px;display:block">`:``;
   document.getElementById('projModalContent').innerHTML=`
     ${coverHtml}
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
