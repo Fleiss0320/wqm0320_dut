@@ -2201,9 +2201,7 @@ function initAdminMap(){
   }
 
   adminMap=L.map('adminMap',{
-    maxBounds:SH_MAX_BOUNDS,
-    maxBoundsViscosity:.8,
-    minZoom:9
+    minZoom:3
   }).setView(SH_CENTER,11);
 
   adminBaseLayers.street=L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8',{maxZoom:18,attribution:'高德'}).addTo(adminMap);
