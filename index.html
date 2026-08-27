@@ -575,6 +575,7 @@
           <th>项目名称</th>
           <th style="width:160px">时间</th>
           <th style="width:130px">结构类型</th>
+          <th style="width:100px">面积(m<sup>2</sup>)</th>
           <th style="width:120px">地区</th>
         </tr></thead>
         <tbody id="projTableBody"></tbody>
@@ -795,6 +796,10 @@
     <div class="form-row">
       <div class="form-group"><label class="form-label">结构类型</label><input class="form-input" id="fp_struct_type" placeholder="如：钢筋混凝土框架"></div>
       <div class="form-group"><label class="form-label">结构层数</label><input class="form-input" id="fp_struct_floors" placeholder="如：6层 / 地上5层地下1层"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">项目面积 (m<sup>2</sup>)</label><input class="form-input" id="fp_area" placeholder="如：3000"></div>
+      <div class="form-group"></div>
     </div>
     <div class="form-group"><label class="form-label">项目简介</label><textarea class="form-textarea" id="fp_desc" placeholder="简要描述项目背景、检测内容、主要结论…"></textarea></div>
     <div class="form-group">
@@ -1922,6 +1927,7 @@ function renderProjectList(){
       <td><strong style="color:var(--kq)">${p.name}</strong>${p.lat?` <span style="font-size:11px;color:var(--pb)">📍</span>`:''}</td>
       <td>${p.date||'—'}</td>
       <td style="font-size:13px;color:var(--text2)">${p.struct_type||'—'}</td>
+      <td style="font-size:13px;color:var(--text2)">${p.area?`<strong style="color:var(--kq)">${p.area}</strong><span style="color:var(--text3);font-size:11px"> m<sup>2</sup></span>`:'—'}</td>
       <td>${p.region||'—'}</td>
     </tr>`;
   }).join('');
@@ -1940,6 +1946,7 @@ function openProjectDetail(projId){
       <div style="font-size:13px;color:var(--text2)">📍 地区：${p.region||'—'}</div>
       ${p.struct_type?`<div style="font-size:13px;color:var(--text2)">🏗 结构类型：${p.struct_type}</div>`:''}
       ${p.struct_floors?`<div style="font-size:13px;color:var(--text2)">🏢 结构层数：${p.struct_floors}</div>`:''}
+      ${p.area?`<div style="font-size:13px;color:var(--text2)">📐 项目面积：<strong style="color:var(--kq)">${p.area}</strong> m<sup>2</sup></div>`:''}
     </div>
     ${p.desc?`<p style="font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:18px;padding:12px;background:var(--kq-light);border-radius:var(--radius);border-left:3px solid var(--kq)">${p.desc}</p>`:''}
     <div class="btn-row"><button class="btn btn-secondary btn-sm" onclick="closeModal('projModal')">关闭</button></div>`;
@@ -1969,9 +1976,7 @@ function initMainMap(){
   if(mainMap){mainMap.invalidateSize();refreshMapMarkers();return}
   mainMap=L.map('map',{
     zoomControl:true,
-    maxBounds:SH_MAX_BOUNDS,
-    maxBoundsViscosity:.8,
-    minZoom:9
+    minZoom:3
   }).setView(SH_CENTER,11);
 
   // Street (Gaode standard map, Chinese labels) - default
@@ -1985,7 +1990,10 @@ function initMainMap(){
   });
 
   refreshMapMarkers();
-  setTimeout(()=>{if(mainMap) mainMap.invalidateSize()},200);
+  // 自动缩放到包含所有项目图斑的范围（多留一圈 padding）
+  setTimeout(()=>{
+    if(mainMap){mainMap.invalidateSize();fitAllProjects()}
+  },200);
 }
 
 function switchBaseLayer(type){
@@ -2052,6 +2060,39 @@ function refreshMapMarkers(){
     }
 
   });
+}
+
+// ── 自动缩放到包含所有项目图斑的范围 ──
+// 从所有有坐标数据的项目（lat/lng + polygon 顶点）计算整体 bounds，
+// 外扩一圈 padding 让视图不那么拥挤；没有任何项目时 fallback 到上海中心。
+function fitAllProjects(){
+  if(!mainMap) return;
+  const projects=DB.get('projects')||[];
+  const bounds=L.latLngBounds();
+  let hasAny=false;
+  projects.forEach(p=>{
+    // 图斑 polygon（优先用精确顶点）
+    if(p.polygon&&p.polygon.length>=3){
+      p.polygon.forEach(([lat,lng])=>{bounds.extend([lat,lng]);hasAny=true});
+    }else if(p.lat&&p.lng){
+      // 仅有中心点
+      bounds.extend([p.lat,p.lng]);
+      hasAny=true;
+    }
+  });
+  if(!hasAny){
+    mainMap.setView(SH_CENTER,11);
+    return;
+  }
+  // 零面积/极小范围（只有一个单点项目）→ 直接居中到 zoom 13，避免缩到 maxZoom
+  const ns=bounds.getNorth()-bounds.getSouth();
+  const ew=bounds.getEast()-bounds.getWest();
+  if(ns<0.001&&ew<0.001){
+    mainMap.setView(bounds.getCenter(),13);
+    return;
+  }
+  // pad(0.25) 让四周各多出约 25% 的空白，看着不挤
+  mainMap.fitBounds(bounds.pad(0.25),{maxZoom:16,animate:true});
 }
 
 function togglePolygons(){
@@ -2373,7 +2414,7 @@ function saveMapMarker(){
       document.getElementById('btnCancelDraw').style.display='none';
       // Keep adminDrawnItems so the polygon remains visible on the admin map
       toast('图斑已保存（'+coords.length+'个顶点）');
-      if(mainMap) refreshMapMarkers();
+      if(mainMap){refreshMapMarkers();fitAllProjects()}
       return;
     }
   }
@@ -2381,7 +2422,7 @@ function saveMapMarker(){
   const projects=DB.get('projects')||[];
   const idx=projects.findIndex(p=>p.id===sel);
   if(idx>=0){projects[idx].lat=tempLatLng.lat;projects[idx].lng=tempLatLng.lng;DB.set('projects',projects);toast('位置已保存')}
-  if(mainMap) refreshMapMarkers();
+  if(mainMap){refreshMapMarkers();fitAllProjects()}
 }
 
 function clearMapMarker(){
@@ -2395,7 +2436,7 @@ function clearMapMarker(){
   tempLatLng=null;
   cancelDrawing();
   toast('已清除位置标记');
-  if(mainMap) refreshMapMarkers();
+  if(mainMap){refreshMapMarkers();fitAllProjects()}
 }
 
 // ══════════════════════════════════════
@@ -2420,7 +2461,7 @@ function renderAdminProjects(){
 function openAddProject(){
   document.getElementById('addProjTitle').textContent='新增项目';
   document.getElementById('fp_id').value='';
-  ['fp_name','fp_date','fp_region','fp_struct_type','fp_struct_floors','fp_desc','fp_cover_data'].forEach(id=>document.getElementById(id).value='');
+  ['fp_name','fp_date','fp_region','fp_struct_type','fp_struct_floors','fp_area','fp_desc','fp_cover_data'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fp_cover_preview').innerHTML='';
   document.getElementById('fp_cover_clear_btn').style.display='none';
   openModal('addProjModal');
@@ -2436,6 +2477,7 @@ function openEditProject(id){
   document.getElementById('fp_region').value=p.region||'';
   document.getElementById('fp_struct_type').value=p.struct_type||'';
   document.getElementById('fp_struct_floors').value=p.struct_floors||'';
+  document.getElementById('fp_area').value=p.area||'';
   document.getElementById('fp_desc').value=p.desc||'';
   document.getElementById('fp_cover_data').value=p.cover||'';
   const prevEl=document.getElementById('fp_cover_preview');
@@ -2460,7 +2502,7 @@ function saveProject(){
   if(!name){toast('请输入项目名称','warn');return}
   const projects=DB.get('projects')||[];
   const existId=document.getElementById('fp_id').value;
-  const data={name,date:document.getElementById('fp_date').value,region:document.getElementById('fp_region').value,struct_type:document.getElementById('fp_struct_type').value,struct_floors:document.getElementById('fp_struct_floors').value,desc:document.getElementById('fp_desc').value,cover:document.getElementById('fp_cover_data').value};
+  const data={name,date:document.getElementById('fp_date').value,region:document.getElementById('fp_region').value,struct_type:document.getElementById('fp_struct_type').value,struct_floors:document.getElementById('fp_struct_floors').value,area:document.getElementById('fp_area').value,desc:document.getElementById('fp_desc').value,cover:document.getElementById('fp_cover_data').value};
   if(existId){
     const idx=projects.findIndex(p=>p.id===existId);
     if(idx>=0) projects[idx]={...projects[idx],...data};
@@ -2486,7 +2528,9 @@ function deleteProject(id){
   }
   projects=projects.filter(p=>p.id!==id);
   DB.set('projects',projects);
-  renderAdminProjects();toast('项目已删除');
+  renderAdminProjects();
+  if(mainMap){refreshMapMarkers();fitAllProjects()}
+  toast('项目已删除');
 }
 
 // ══════════════════════════════════════
