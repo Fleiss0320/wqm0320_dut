@@ -1967,6 +1967,23 @@ let currentBaseLayer='street';
 let baseLayers={};
 let polygonsVisible=true;
 
+// ── 兼容新旧数据格式 ──
+// 新项目用 p.polygons=[[[lat,lng],...],...]（多图斑）
+// 老项目用 p.polygon=[[lat,lng],...]（单图斑）
+// 返回统一格式：[[[lat,lng],...], ...]
+function getProjectPolygons(p){
+  if(!p) return [];
+  // 新格式：polygons 数组
+  if(p.polygons&&Array.isArray(p.polygons)&&p.polygons.length>0){
+    return p.polygons.filter(g=>Array.isArray(g)&&g.length>=3);
+  }
+  // 老格式：单个 polygon —— 包装成数组返回
+  if(p.polygon&&Array.isArray(p.polygon)&&p.polygon.length>=3){
+    return [p.polygon];
+  }
+  return [];
+}
+
 // Shanghai bounds (rough): SW[30.69,120.86] NE[31.87,121.97]
 const SH_BOUNDS=L.latLngBounds(L.latLng(30.69,120.86),L.latLng(31.87,121.97));
 const SH_CENTER=[31.23,121.47];
@@ -2025,29 +2042,31 @@ function refreshMapMarkers(){
   projects.filter(p=>p.lat&&p.lng).forEach((p,i)=>{
     const color='#014b8f';
     const icon=createGradientPinIcon(i);
+    const polys=getProjectPolygons(p);
 
-    // If project has polygon data, draw it instead of circle
-    if(p.polygon&&p.polygon.length>=3){
-      const poly=L.polygon(p.polygon,{
-        color,fillColor:color,fillOpacity:.25,weight:2.5,
-        dashArray:'6 2',opacity:.85
+    if(polys.length>0){
+      // 多图斑：遍历每个 polygon 都画出来，共用同一个 popup 内容
+      polys.forEach(pts=>{
+        const poly=L.polygon(pts,{
+          color,fillColor:color,fillOpacity:.25,weight:2.5,
+          dashArray:'6 2',opacity:.85
+        });
+        if(polygonsVisible) poly.addTo(mainMap);
+        poly.bindPopup(`<div class="proj-popup">
+          <h4>${p.name}</h4>
+          <p>${p.date||''} · ${p.region||''}</p>
+          ${p.struct_type?`<p>🏗 ${p.struct_type}${p.struct_floors?' · '+p.struct_floors:''}</p>`:''}
+          <button class="popup-btn" onclick="openProjectDetail('${p.id}');mainMap&&mainMap.closePopup()">查看资料</button>
+        </div>`,{maxWidth:250});
+        mapPolygons.push(poly);
       });
-      if(polygonsVisible) poly.addTo(mainMap);
-      poly.bindPopup(`<div class="proj-popup">
-        <h4>${p.name}</h4>
-        <p>${p.date||''} · ${p.region||''}</p>
-        ${p.struct_type?`<p>🏗 ${p.struct_type}${p.struct_floors?' · '+p.struct_floors:''}</p>`:''}
-        <button class="popup-btn" onclick="openProjectDetail('${p.id}');mainMap&&mainMap.closePopup()">查看资料</button>
-      </div>`,{maxWidth:250});
-      mapPolygons.push(poly);
-
-      // Marker at center — only show when polygonsVisible is true
+      // 共用一个中心点 marker
       const centerMarker=L.marker([p.lat,p.lng],{icon});
-      centerMarker.bindPopup(poly.getPopup());
+      centerMarker.bindPopup(mapPolygons[mapPolygons.length-1].getPopup());
       if(polygonsVisible) centerMarker.addTo(mainMap);
       mapCenterMarkers.push(centerMarker);
     }else{
-      // Fallback to circle + marker
+      // 仅有中心点：circle + marker
       const circle=L.circle([p.lat,p.lng],{radius:9000,color,fillColor:color,fillOpacity:.2,weight:2}).addTo(mainMap);
       const marker=L.marker([p.lat,p.lng],{icon}).addTo(mainMap);
       marker.bindPopup(`<div class="proj-popup">
@@ -2071,14 +2090,13 @@ function fitAllProjects(){
   const bounds=L.latLngBounds();
   let hasAny=false;
   projects.forEach(p=>{
-    // 图斑 polygon（优先用精确顶点）
-    if(p.polygon&&p.polygon.length>=3){
-      p.polygon.forEach(([lat,lng])=>{bounds.extend([lat,lng]);hasAny=true});
-    }else if(p.lat&&p.lng){
-      // 仅有中心点
-      bounds.extend([p.lat,p.lng]);
-      hasAny=true;
-    }
+    // 所有 polygon 的所有顶点
+    const polys=getProjectPolygons(p);
+    polys.forEach(pts=>{
+      pts.forEach(([lat,lng])=>{bounds.extend([lat,lng]);hasAny=true});
+    });
+    // 以及中心点（没有 polygon 的项目也能被包含）
+    if(p.lat&&p.lng){bounds.extend([p.lat,p.lng]);hasAny=true}
   });
   if(!hasAny){
     mainMap.setView(SH_CENTER,11);
@@ -2252,8 +2270,7 @@ function initAdminMap(){
   });
 
   adminMap.on(L.Draw.Event.CREATED,function(e){
-    adminDrawnItems.clearLayers();
-    adminDrawnItems.addLayer(e.layer);
+    adminDrawnItems.addLayer(e.layer);  // 追加，保留之前画的所有图斑
     tempLatLng=null;
     if(adminMapMarker){adminMap.removeLayer(adminMapMarker);adminMapMarker=null}
     // Exit draw mode automatically after finishing
@@ -2261,6 +2278,7 @@ function initAdminMap(){
     if(adminDrawControl) adminMap.removeControl(adminDrawControl);
     document.getElementById('btnDrawPolygon').style.display='';
     document.getElementById('btnCancelDraw').style.display='none';
+    toast('图斑已添加，可继续绘制或保存');
   });
 
   // Also reset flag when user cancels drawing via ESC or draw control
@@ -2364,10 +2382,16 @@ function onMapEditProjChange(){
     adminMapMarker.on('dragend',function(){tempLatLng=adminMapMarker.getLatLng()});
     adminMap.setView([p.lat,p.lng],13);
   }else{tempLatLng=null}
-  if(p.polygon&&p.polygon.length>=3){
-    const poly=L.polygon(p.polygon,{color:'#014b8f',fillOpacity:.25,weight:3});
-    adminDrawnItems.addLayer(poly);
-    adminMap.fitBounds(poly.getBounds().pad(.1));
+  // 加载所有图斑（兼容新旧格式）
+  const polys=getProjectPolygons(p);
+  if(polys.length>0){
+    const group=L.featureGroup();
+    polys.forEach(pts=>{
+      const poly=L.polygon(pts,{color:'#014b8f',fillOpacity:.25,weight:3});
+      adminDrawnItems.addLayer(poly);
+      group.addLayer(poly);
+    });
+    adminMap.fitBounds(group.getBounds().pad(.1));
   }
   cancelDrawing();
 }
@@ -2381,7 +2405,6 @@ function populateMapEditSelect(){
 function saveMapMarker(){
   const sel=document.getElementById('mapEditProj').value;
   if(!sel){
-    // Check if there's drawn content to give a more helpful message
     const drawnLayers=adminDrawnItems?adminDrawnItems.getLayers():[];
     if(drawnLayers&&drawnLayers.length>0){
       toast('请先在上方选择要保存的项目','warn');
@@ -2391,35 +2414,54 @@ function saveMapMarker(){
     return
   }
   const drawnLayers=adminDrawnItems.getLayers();
-  if(drawnLayers.length>0){
-    const layer=drawnLayers[0];
+  // 收集所有 Polygon/Polyline 类型的图斑
+  const polys=[];
+  drawnLayers.forEach(layer=>{
     if(layer instanceof L.Polygon || layer instanceof L.Polyline){
-      const coords=layer.getLatLngs()[0].map(ll=>[ll.lat,ll.lng]);
-      const lat=coords.reduce((s,c)=>s+c[0],0)/coords.length;
-      const lng=coords.reduce((s,c)=>s+c[1],0)/coords.length;
-      const projects=DB.get('projects')||[];
-      const idx=projects.findIndex(p=>p.id===sel);
-      if(idx>=0){
-        projects[idx].lat=lat;
-        projects[idx].lng=lng;
-        projects[idx].polygon=coords;
-        DB.set('projects',projects);
+      const pts=layer.getLatLngs()[0];
+      if(pts&&pts.length>=3){
+        polys.push(pts.map(ll=>[ll.lat,ll.lng]));
       }
-      // Clean up draw state without clearing the drawn items
-      isDrawingPolygon=false;
-      if(adminDrawControl) adminMap.removeControl(adminDrawControl);
-      document.getElementById('btnDrawPolygon').style.display='';
-      document.getElementById('btnCancelDraw').style.display='none';
-      // Keep adminDrawnItems so the polygon remains visible on the admin map
-      toast('图斑已保存（'+coords.length+'个顶点）');
-      if(mainMap){refreshMapMarkers();fitAllProjects()}
-      return;
     }
+  });
+
+  if(polys.length>0){
+    // 计算整体中心点（所有顶点的几何中心）
+    let totalLat=0,totalLng=0,total=0;
+    polys.forEach(pts=>{
+      pts.forEach(([lat,lng])=>{totalLat+=lat;totalLng+=lng;total++});
+    });
+    const lat=totalLat/total;
+    const lng=totalLng/total;
+    const projects=DB.get('projects')||[];
+    const idx=projects.findIndex(p=>p.id===sel);
+    if(idx>=0){
+      projects[idx].lat=lat;
+      projects[idx].lng=lng;
+      projects[idx].polygons=polys;
+      delete projects[idx].polygon;  // 清理老格式字段
+      DB.set('projects',projects);
+    }
+    // 清理 draw 状态
+    isDrawingPolygon=false;
+    if(adminDrawControl) adminMap.removeControl(adminDrawControl);
+    document.getElementById('btnDrawPolygon').style.display='';
+    document.getElementById('btnCancelDraw').style.display='none';
+    toast('已保存 '+polys.length+' 个图斑');
+    if(mainMap){refreshMapMarkers();fitAllProjects()}
+    return;
   }
+  // 没有 polygon，fallback 到 marker 模式
   if(!tempLatLng){toast('请在地图上点击标记位置或绘制图斑','warn');return}
   const projects=DB.get('projects')||[];
   const idx=projects.findIndex(p=>p.id===sel);
-  if(idx>=0){projects[idx].lat=tempLatLng.lat;projects[idx].lng=tempLatLng.lng;DB.set('projects',projects);toast('位置已保存')}
+  if(idx>=0){
+    projects[idx].lat=tempLatLng.lat;
+    projects[idx].lng=tempLatLng.lng;
+    delete projects[idx].polygons;delete projects[idx].polygon;
+    DB.set('projects',projects);
+    toast('位置已保存')
+  }
   if(mainMap){refreshMapMarkers();fitAllProjects()}
 }
 
@@ -2428,7 +2470,7 @@ function clearMapMarker(){
   if(!sel){toast('请先选择项目','warn');return}
   const projects=DB.get('projects')||[];
   const idx=projects.findIndex(p=>p.id===sel);
-  if(idx>=0){delete projects[idx].lat;delete projects[idx].lng;delete projects[idx].polygon;DB.set('projects',projects)}
+  if(idx>=0){delete projects[idx].lat;delete projects[idx].lng;delete projects[idx].polygons;delete projects[idx].polygon;DB.set('projects',projects)}
   if(adminMapMarker){adminMap.removeLayer(adminMapMarker);adminMapMarker=null}
   adminDrawnItems.clearLayers();
   tempLatLng=null;
